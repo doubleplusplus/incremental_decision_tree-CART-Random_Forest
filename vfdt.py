@@ -1,6 +1,8 @@
 # vfdt class, vfdt_node class, Example class
+# in command window, type in:
+# python3 vfdt.py
+# data file bank.csv need to be in the same directory of vfdt.py
 #
-# 
 # 08/05/2018
 # ver 0.01
 
