@@ -1,5 +1,4 @@
 # vfdt class, vfdt_node class, Example class
-# test_run function
 #
 # Jamie Deng
 # 08/05/2018
