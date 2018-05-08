@@ -1,6 +1,6 @@
 # vfdt class, vfdt_node class, Example class
 #
-# Jamie Deng
+# 
 # 08/05/2018
 # ver 0.01
 
