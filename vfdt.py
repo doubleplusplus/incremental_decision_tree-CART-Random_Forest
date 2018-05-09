@@ -250,7 +250,7 @@ class vfdt:
 def main():
     start_time = time.time()
 
-    rows = 6000
+    rows = 3000
     n_training = int(0.8 * rows)
     # read_csv has parameter nrows=n that read the first n rows
     df = pd.read_csv('bank.csv', nrows=rows, header=0, sep=";")
