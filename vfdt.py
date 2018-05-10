@@ -4,7 +4,7 @@
 #
 # Jamie
 # 08/05/2018
-# ver 0.01
+# ver 0.02
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ import math
 import time
 
 
-# tringing example class
+# data example class
 class Example:
     def __init__(self, line):
         self.x = line[:-1]  # attributes values
@@ -103,7 +103,7 @@ class vfdt_node:
     def splittable(self, delta, nmin):
         if(self.new_examples_seen < nmin):
             return(None)
-    
+
         else:
             self.new_examples_seen = 0  # reset
 
@@ -234,7 +234,7 @@ class vfdt:
         return(float(correct) / len(examples))
 
 
-def main():
+def test_run():
     start_time = time.time()
 
     # bank.csv whole data size: 4521
@@ -304,4 +304,4 @@ def main():
     print("--- Running time: %.6f seconds ---" % (time.time() - start_time))
 
 if __name__ == "__main__":
-    main()
+    test_run()
