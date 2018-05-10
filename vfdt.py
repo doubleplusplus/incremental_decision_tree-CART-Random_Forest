@@ -12,7 +12,7 @@ import math
 import time
 
 
-# tringing example class
+# data example class
 class Example:
     def __init__(self, line):
         self.x = line[:-1]  # attributes values
