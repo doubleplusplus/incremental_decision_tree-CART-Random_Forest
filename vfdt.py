@@ -252,6 +252,7 @@ def test_run():
             temp = len(feature_values[f])
             if (temp > bins):
                 bins = temp
+
     # bins for discretization
     # set bins to maximum unique values of discrete features
     # could use different method, then set labels equals to bins
@@ -268,22 +269,21 @@ def test_run():
 
     # convert df to data examples
     array = df.head(3000).values
-    examples1 = []
-    examples2 = []
-    examples3 = []
+    set1 = []
+    set2 = []
+    set3 = []
     possible_split_features = title[:-1]
-    n = len(array)
     count = 0
-    for i in range(n):
+    for i in range(len(array)):
         count += 1
-        if (count <= 1000):
-            examples1.append(Example(array[i]))
-        elif (count > 1000 and count <= 2000):
-            examples2.append(Example(array[i]))
+        if (count <= 200):
+            set1.append(Example(array[i]))
+        elif (count > 200 and count <= 500):
+            set2.append(Example(array[i]))
         else:
-            examples3.append(Example(array[i]))
-
-    examples = [examples1, examples2, examples3]
+            set3.append(Example(array[i]))
+    # to simulate continous training, modify the tree for each training set
+    examples = [set1, set2, set3]
 
     # test set is different from training set
     n_test = 500
@@ -296,7 +296,7 @@ def test_run():
     # heoffding bound parameter delta: with 1 - delta probability
     # the true mean is at least r - gamma
     # vfdt parameter nmin: test split if new sample size > nmin
-    delta = 0.01
+    delta = 0.05
     nmin = 30
     tree = vfdt(feature_values, delta, nmin)
     print('Total data size: ', rows)
