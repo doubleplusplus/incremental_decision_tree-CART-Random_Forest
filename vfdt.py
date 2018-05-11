@@ -1,10 +1,13 @@
-# vfdt class, vfdt_node class, Example class
-# test in command line window
-# in program directory: python3 vfdt.py
+# Very Fast Decision Tree i.e. Hoeffding Tree, described in
+# "Mining High-Speed Data Streams" (Domingos & Hulten, 2000)
+#
+# this program contains 3 classes: vfdt, vfdt_node, Example
+# test in command line window: python3 vfdt.py
 #
 # Jamie
 # 08/05/2018
 # ver 0.02
+
 
 import numpy as np
 import pandas as pd
@@ -32,12 +35,12 @@ class vfdt_node:
         self.nijk = {i:{} for i in possible_split_features}
         self.possible_split_features = possible_split_features
 
-    def add_children(self, split_feature, nodes):
-        if (not nodes):
-            raise Exception('no children')
+    def add_children(self, split_feature, children):
+        if (not children):
+            raise Exception('Parameter children is empty')
         self.split_feature = split_feature
-        self.children = nodes
-        self.nijk.clear()
+        self.children = children
+        self.nijk.clear()  # reset stats
 
     # recursively trace down the tree to distribute data examples to corresponding leaves
     def sort_example(self, example):
@@ -49,10 +52,10 @@ class vfdt_node:
         else:
             return(self)
 
-
     def is_leaf(self):
         return(self.children == None)
 
+    # for debugging purpose, not a essential function
     def display_children(self):
         if (self.is_leaf()):
             print('It is leaf')
@@ -64,21 +67,17 @@ class vfdt_node:
 
     # the most frequent classification
     def most_frequent(self):
-        if (not self.is_leaf()):
-            raise Exception('Not a leaf')
+        if (self.class_frequency):
+            prediction = max(self.class_frequency, key=self.class_frequency.get)
         else:
-            if (not self.class_frequency and self.parent != None):
-                class_frequency = self.parent.class_frequency
-                prediction = max(class_frequency, key=class_frequency.get)
-            else:
-                prediction = max(self.class_frequency, key=self.class_frequency.get)
-            return(prediction)
+            # if self.class_frequency dict is empty, go back to parent
+            class_frequency = self.parent.class_frequency
+            prediction = max(class_frequency, key=class_frequency.get)
+        return(prediction)
 
     # upadate leaf stats in order to calculate infomation gain
     def update_stats(self, example):
         label = example.y
-        if(self.is_leaf() == False):
-            raise Exception('This is not a leaf')
         feats = self.possible_split_features
         for i in feats:
             if (i != None):
@@ -103,10 +102,9 @@ class vfdt_node:
     def splittable(self, delta, nmin):
         if(self.new_examples_seen < nmin):
             return(None)
-
         else:
             self.new_examples_seen = 0  # reset
-
+            
         mx = 0
         second_mx = 0
         Xa = ''
@@ -116,7 +114,7 @@ class vfdt_node:
                 if (value > mx):
                     mx = value
                     Xa = feature
-                elif (value > second_mx and value < mx):
+                elif (value < mx and value > second_mx):
                     second_mx = value
         R = math.log10(len(self.class_frequency))
         sigma = self.hoeffding_bound(R, delta, self.total_examples_seen)
@@ -127,7 +125,6 @@ class vfdt_node:
         else:
             return(None)
 
-    # hoeffding bound, by Domingos & Hulten 2000
     def hoeffding_bound(self, R, delta, n):
         return(math.sqrt((R*R) * math.log(1/delta) / (2 * n)))
 
@@ -169,8 +166,8 @@ class vfdt_node:
         return ig
 
     def get_visualization(self, indent):
-        if (self.children == None):
-            return(indent + 'Leaf\n')
+        if (self.is_leaf()):
+            return(indent + ' Leaf\n')
         else:
             visualization = ''
             for key in self.children:
@@ -221,8 +218,8 @@ class vfdt:
 
     # predict test example's classification
     def predict(self, example):
-        node = self.root.sort_example(example)
-        prediction = node.most_frequent()
+        leaf = self.root.sort_example(example)
+        prediction = leaf.most_frequent()
         return(prediction)
 
     # accuracy of a test set
@@ -281,7 +278,7 @@ def test_run():
     # heoffding bound parameter delta: with 1 - delta probability
     # the true mean is at least r - gamma
     # vfdt parameter nmin: test split if new sample size > nmin
-    delta = 0.01
+    delta = 0.03
     nmin = 10
     tree = vfdt(feature_values, delta, nmin)
     for ex in examples:
