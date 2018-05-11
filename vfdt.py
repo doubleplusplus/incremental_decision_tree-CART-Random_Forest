@@ -104,7 +104,7 @@ class vfdt_node:
             return(None)
         else:
             self.new_examples_seen = 0  # reset
-            
+
         mx = 0
         second_mx = 0
         Xa = ''
@@ -236,8 +236,8 @@ def test_run():
 
     # bank.csv whole data size: 4521
     # if more than 4521, it revert back to 4521
-    rows = 1000
-    n_training = int(0.8 * rows)
+    rows = 4500
+    # n_training = int(0.8 * rows)
     # read_csv has parameter nrows=n that read the first n rows
     df = pd.read_csv('bank.csv', nrows=rows, header=0, sep=";")
     title = list(df.columns.values)
@@ -267,36 +267,49 @@ def test_run():
             feature_values[f] = df[f].unique()
 
     # convert df to data examples
-    array = df.head(n_training).values
-    examples = []
+    array = df.head(3000).values
+    examples1 = []
+    examples2 = []
+    examples3 = []
     possible_split_features = title[:-1]
     n = len(array)
+    count = 0
     for i in range(n):
-        ex = Example(array[i])
-        examples.append(ex)
+        count += 1
+        if (count <= 1000):
+            examples1.append(Example(array[i]))
+        elif (count > 1000 and count <= 2000):
+            examples2.append(Example(array[i]))
+        else:
+            examples3.append(Example(array[i]))
 
-    # heoffding bound parameter delta: with 1 - delta probability
-    # the true mean is at least r - gamma
-    # vfdt parameter nmin: test split if new sample size > nmin
-    delta = 0.03
-    nmin = 10
-    tree = vfdt(feature_values, delta, nmin)
-    for ex in examples:
-        tree.update(ex)
-    # print(tree.root.get_visualization('$'))
+    examples = [examples1, examples2, examples3]
 
     # test set is different from training set
-    n_test = rows - n_training
+    n_test = 500
     test_set = df.tail(n_test).values
     test = []
     for i in range(len(test_set)):
         sample = Example(test_set[i])
         test.append(sample)
 
+    # heoffding bound parameter delta: with 1 - delta probability
+    # the true mean is at least r - gamma
+    # vfdt parameter nmin: test split if new sample size > nmin
+    delta = 0.01
+    nmin = 30
+    tree = vfdt(feature_values, delta, nmin)
     print('Total data size: ', rows)
-    print('Training set: ', len(array))
-    print('Test set: ', len(test_set))
-    print('ACCURACY: %.4f' % tree.accuracy(test))
+    print('Test set (tail): ', len(test_set))
+    n = 0
+    for training_set in examples:
+        n += len(training_set)
+        for ex in training_set:
+            tree.update(ex)
+        print('Training set:', n, end=', ')
+        print('ACCURACY: %.4f' % tree.accuracy(test))
+
+    # print(tree.root.get_visualization('$'))
 
     print("--- Running time: %.6f seconds ---" % (time.time() - start_time))
 
