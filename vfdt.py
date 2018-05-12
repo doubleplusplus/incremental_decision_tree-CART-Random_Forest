@@ -1,7 +1,7 @@
 # Very Fast Decision Tree i.e. Hoeffding Tree, described in
 # "Mining High-Speed Data Streams" (Domingos & Hulten, 2000)
 #
-# this program contains 3 classes: vfdt, vfdt_node, Example
+# this program contains 2 classes: vfdt, vfdt_node
 # test in command line window: python3 vfdt.py
 #
 # Jamie
@@ -13,13 +13,6 @@ import numpy as np
 import pandas as pd
 import math
 import time
-
-
-# data example class
-class Example:
-    def __init__(self, line):
-        self.x = line[:-1]  # attributes values
-        self.y = line[-1]  # label
 
 
 # VFDT node class
@@ -47,7 +40,7 @@ class vfdt_node:
         value = 0
         if (self.children != None):
             index = self.possible_split_features.index(self.split_feature)
-            value = example.x[index]
+            value = example[:-1][index]
             return(self.children[value].sort_example(example))
         else:
             return(self)
@@ -77,11 +70,11 @@ class vfdt_node:
 
     # upadate leaf stats in order to calculate infomation gain
     def update_stats(self, example):
-        label = example.y
+        label = example[-1]
         feats = self.possible_split_features
         for i in feats:
             if (i != None):
-                value = example.x[feats.index(i)]
+                value = example[:-1][feats.index(i)]
                 if (value not in self.nijk[i]):
 
                     d = {label : 1}
@@ -226,7 +219,7 @@ class vfdt:
     def accuracy(self, examples):
         correct = 0
         for ex in examples:
-            if (self.predict(ex) == ex.y):
+            if (self.predict(ex) == ex[-1]):
                 correct +=1
         return(float(correct) / len(examples))
 
@@ -277,11 +270,11 @@ def test_run():
     for i in range(len(array)):
         count += 1
         if (count <= 200):
-            set1.append(Example(array[i]))
+            set1.append(array[i])
         elif (count > 200 and count <= 500):
-            set2.append(Example(array[i]))
+            set2.append(array[i])
         else:
-            set3.append(Example(array[i]))
+            set3.append(array[i])
     # to simulate continous training, modify the tree for each training set
     examples = [set1, set2, set3]
 
@@ -290,8 +283,7 @@ def test_run():
     test_set = df.tail(n_test).values
     test = []
     for i in range(len(test_set)):
-        sample = Example(test_set[i])
-        test.append(sample)
+        test.append(test_set[i])
 
     # heoffding bound parameter delta: with 1 - delta probability
     # the true mean is at least r - gamma
