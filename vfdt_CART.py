@@ -201,16 +201,6 @@ class vfdt_node:
         value = min(gini, key=gini.get)
         return(value, gini)
 
-    def get_visualization(self, indent):
-        if (self.is_leaf()):
-            return(indent + ' Leaf\n')
-        else:
-            visualization = ''
-            for key in self.children:
-                visualization += indent + self.split_feature + ' = ' + str(key) + ':\n'
-                visualization += self.children[key].get_visualization(indent + ' | ')
-            return(visualization)
-
 # very fast decision tree class, i.e. hoeffding tree
 class vfdt:
     # parameters
