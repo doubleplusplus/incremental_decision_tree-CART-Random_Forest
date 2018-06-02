@@ -119,7 +119,7 @@ class vfdt_node:
             return(None)
 
     def hoeffding_bound(self, R, delta, n):
-        return(math.sqrt((R*R) * math.log(1/delta) / (2 * n)))
+        return (R * R * np.log(1/delta) / (2 * n))**0.5
 
     def entropy(self, class_frequencies):
         total_examples = 0
@@ -261,7 +261,7 @@ def test_run():
             feature_values[f] = df[f].unique()
 
     # convert df to data examples
-    array = df.head(3000).values
+    array = df.head(4000).values
     set1 = []
     set2 = []
     set3 = []
@@ -269,9 +269,9 @@ def test_run():
     count = 0
     for i in range(len(array)):
         count += 1
-        if (count <= 200):
+        if (count <= 1000):
             set1.append(array[i])
-        elif (count > 200 and count <= 500):
+        elif (count > 1000 and count <= 2000):
             set2.append(array[i])
         else:
             set3.append(array[i])
