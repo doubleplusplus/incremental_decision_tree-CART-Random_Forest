@@ -100,14 +100,14 @@ class vfdt_node:
             return(None)
         else:
             self.new_examples_seen = 0  # reset
-
+        nijk = self.nijk
         min = 1
         second_min = 1
         Xa = ''
         g = {}
         feature_value = None
         for feature in self.possible_split_features:
-            if (feature != None):
+            if (len(nijk[feature]) != 1):
                 value, g = self.Gini(feature)
                 gini = g[value]
                 if (gini < min):
@@ -116,6 +116,8 @@ class vfdt_node:
                     feature_value = value
                 elif (min < gini < second_min):
                     second_min = gini
+            else:
+                return None
 
         R = np.log(len(self.class_frequency))
         sigma = self.hoeffding_bound(R, delta, self.total_examples_seen)
