@@ -152,8 +152,8 @@ class vfdt_node:
         D = self.total_examples_seen
         class_frequency = self.class_frequency
 
-        m1 = 1
-        m2 = 1
+        m1 = 1  # minimum gini
+        m2 = 1  # second minimum gini
         Xa_value = None
         test = next(iter(njk))  # test j value
         # if not isinstance(test, np.object):
@@ -194,13 +194,13 @@ class vfdt_node:
                     Xa_value = split[index]
                 elif m1 < g < m2:
                     m2 = g
-            return [g, Xa_value]
+            return [m1, Xa_value]
 
         # discrete feature_values
         except TypeError:
             length = len(njk)
             feature_values = list(njk.keys())
-
+            right = None
             if length > 10:  # too many discrete feature values
                 for j, k in njk.items():
                     D1 = sum(k.values())
@@ -227,8 +227,7 @@ class vfdt_node:
                         Xa_value = j
                     elif m1 < g < m2:
                         m2 = g
-                left = Xa_value
-                right = list(np.setdiff1d(feature_values, left))
+                right = list(np.setdiff1d(feature_values, Xa_value))
 
             else:  # fewer discrete feature values
                 comb = self.select_combinations(feature_values)
@@ -260,8 +259,8 @@ class vfdt_node:
                         Xa_value = left
                     elif m1 < g < m2:
                         m2 = g
-                right = list(np.setdiff1d(feature_values, left))
-            return [g, [left, right]]
+                right = list(np.setdiff1d(feature_values, Xa_value))
+            return [m1, [Xa_value, right]]
 
     def select_combinations(self, feature_values):
         combination = []
@@ -399,7 +398,7 @@ def test_run():
     # the true mean is at least r - gamma
     # vfdt parameter nmin: test split if new sample size > nmin
 
-    tree = vfdt(feature_values, delta=0.01, nmin=50, tau=0.1)
+    tree = vfdt(feature_values, delta=0.05, nmin=100, tau=0.05)
     print('Total data size: ', rows)
     print('Test set (tail): ', len(test_set))
     n = 0
