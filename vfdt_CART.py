@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import math
 import time
+from itertools import combinations
 
 
 # VFDT node class
@@ -32,16 +33,16 @@ class vfdt_node:
         self.possible_split_features = possible_split_features
 
     def add_children(self, split_feature, left, right):
-        if (not left and not right):
-            raise Exception('Parameter children is empty')
         self.split_feature = split_feature
         self.left_child = left
         self.right_child = right
+        left.parent = self
+        right.parent = self
         self.nijk.clear()  # reset stats
 
     # recursively trace down the tree to distribute data examples to corresponding leaves
     def sort_example(self, example):
-        if (self.left_child != None and self.right_child != None):
+        if (not self.is_leaf()):
             index = self.possible_split_features.index(self.split_feature)
             value = example[:-1][index]
 
@@ -51,10 +52,10 @@ class vfdt_node:
                 else:
                     return self.right_child.sort_example(example)
             except TypeError:  # discrete value
-                if value in self.split_value:
-                    return self.right_child.sort_example(example)
-                else:
+                if value in self.split_value[0]:
                     return self.left_child.sort_example(example)
+                else:
+                    return self.right_child.sort_example(example)
         else:
             return(self)
 
@@ -79,7 +80,6 @@ class vfdt_node:
             if (i != None):
                 value = example[:-1][feats.index(i)]
                 if (value not in self.nijk[i]):
-
                     d = {label : 1}
                     self.nijk[i][value] = d
                 else:
@@ -94,6 +94,15 @@ class vfdt_node:
         else:
             self.class_frequency[label] += 1
 
+    def check_not_splitting(self):
+        # compute Gini index for not splitting
+        X0 = 1
+        class_frequency = self.class_frequency
+        n = sum(class_frequency.values())
+        for j, k in class_frequency.items():
+            X0 -= (k/n)**2
+        return X0
+
     # use hoeffding tree model to test node split, return the split feature
     def splittable(self, delta, nmin, tau):
         if(self.new_examples_seen < nmin):
@@ -104,51 +113,58 @@ class vfdt_node:
         min = 1
         second_min = 1
         Xa = ''
-        g = {}
-        feature_value = None
+        split_value = None
         for feature in self.possible_split_features:
             if (len(nijk[feature]) != 1):
-                value, g = self.Gini(feature)
-                gini = g[value]
+                gini, value = self.Gini(feature)
                 if (gini < min):
                     min = gini
                     Xa = feature
-                    feature_value = value
+                    split_value = value
                 elif (min < gini < second_min):
                     second_min = gini
             else:
                 return None
 
-        R = np.log(len(self.class_frequency))
-        sigma = self.hoeffding_bound(R, delta, self.total_examples_seen)
-        if (second_min - min > sigma):
-            return [Xa, feature_value, g]
-        elif (sigma < tau and second_min - min < tau):
-            return [Xa, feature_value, g]
+        sigma = self.hoeffding_bound(delta)
+        X0 = self.check_not_splitting()
+        if min < X0:
+            if (second_min - min > sigma):
+                return [Xa, split_value]
+            elif (sigma < tau and second_min - min < tau):
+                return [Xa, split_value]
+            else:
+                return None
         else:
             return None
 
-    def hoeffding_bound(self, R, delta, n):
+    def hoeffding_bound(self, delta):
+        n = self.total_examples_seen
+        R = np.log(len(self.class_frequency))
         return (R * R * np.log(1/delta) / (2 * n))**0.5
 
     def Gini(self, feature):
         '''
         Gini(D) = 1 - Sum(pi^2)
-        Gini(D, f=f*) = |D1|/|D|*Gini(D1) + |D2|/|D|*Gini(D2)
+        Gini(D, F=f) = |D1|/|D|*Gini(D1) + |D2|/|D|*Gini(D2)
         '''
         njk = self.nijk[feature]
         D = self.total_examples_seen
         class_frequency = self.class_frequency
-        gini = {}
 
+        m1 = 1
+        m2 = 1
+        Xa_value = None
         test = next(iter(njk))  # test j value
-        # continous feature values
-        if isinstance(test, int) or isinstance(test, float):
+        # if not isinstance(test, np.object):
+        try:  # continous feature values
+            test += 0
             sort = sorted([j for j in njk.keys()])
             split = []
             for i in range(1, len(sort)):
                 temp = (sort[i-1] + sort[i])/2
                 split.append(temp)
+
             D1 = 0
             D1_class_frequency = {j:0 for j in class_frequency.keys()}
             for index in range(len(split)):
@@ -173,35 +189,98 @@ class vfdt_node:
                 for key, v in D2_class_frequency.items():
                     g_d2 -= (v/float(D2))**2
                 g = g_d1*D1/D + g_d2*D2/D
-                gini[split[index]] = g
+                if g < m1:
+                    m1 = g
+                    Xa_value = split[index]
+                elif m1 < g < m2:
+                    m2 = g
+            return [g, Xa_value]
 
         # discrete feature_values
-        else:
-            for j, k in njk.items():
-                D1 = sum(k.values())
-                D2 = D - D1
-                g_d1 = 1
-                g_d2 = 1
+        except TypeError:
+            length = len(njk)
+            feature_values = list(njk.keys())
 
-                D2_class_frequency = {}
-                for key, value in class_frequency.items():
-                    if key in k:
-                        D2_class_frequency[key] = value - k[key]
-                    else:
-                        D2_class_frequency[key] = value
+            if length > 10:  # too many discrete feature values
+                for j, k in njk.items():
+                    D1 = sum(k.values())
+                    D2 = D - D1
+                    g_d1 = 1
+                    g_d2 = 1
 
-                for key, v in k.items():
-                    g_d1 -= (v/D1)**2
+                    D2_class_frequency = {}
+                    for key, value in class_frequency.items():
+                        if key in k:
+                            D2_class_frequency[key] = value - k[key]
+                        else:
+                            D2_class_frequency[key] = value
 
-                if D2 != 0:
+                    for key, v in k.items():
+                        g_d1 -= (v/D1)**2
+
+                    if D2 != 0:
+                        for key, v in D2_class_frequency.items():
+                            g_d2 -= (v/D2)**2
+                    g = g_d1*D1/D + g_d2*D2/D
+                    if g < m1:
+                        m1 = g
+                        Xa_value = j
+                    elif m1 < g < m2:
+                        m2 = g
+                left = Xa_value
+                right = list(np.setdiff1d(feature_values, left))
+
+            else:  # fewer discrete feature values
+                comb = self.select_combinations(feature_values)
+                for i in comb:
+                    left = list(i)
+                    D1 = 0
+                    D2 = 0
+                    D1_class_frequency = {key:0 for key in class_frequency.keys()}
+                    D2_class_frequency = {key:0 for key in class_frequency.keys()}
+                    for j,k in njk.items():
+                        for key, value in class_frequency.items():
+                            if j in left:
+                                if key in k:
+                                    D1 += sum(k.values())
+                                    D1_class_frequency[key] += k[key]
+                            else:
+                                if key in k:
+                                    D2 += sum(k.values())
+                                    D2_class_frequency[key] += k[key]
+                    g_d1 = 1
+                    g_d2 = 1
+                    for key, v in D1_class_frequency.items():
+                        g_d1 -= (v/D1)**2
                     for key, v in D2_class_frequency.items():
-                        g_d2 -= (v/D2)**2
+                        g_d2 -= (v/D1)**2
+                    g = g_d1*D1/D + g_d2*D2/D
+                    if g < m1:
+                        m1 = g
+                        Xa_value = left
+                    elif m1 < g < m2:
+                        m2 = g
+                right = list(np.setdiff1d(feature_values, left))
+            return [g, [left, right]]
 
-                g = g_d1*D1/D + g_d2*D2/D
-                gini[j] = g
+    def select_combinations(self, feature_values):
+        combination = []
+        e = len(feature_values)
+        if e % 2 == 0:
+            end = int(e/2)
+            for i in range(1, end+1):
+                if i == end:
+                    cmb = list(combinations(feature_values, i))
+                    enough = int(len(cmb)/2)
+                    combination.extend(cmb[:enough])
+                else:
+                    combination.extend(combinations(feature_values, i))
+        else:
+            end = int((e-1)/2)
+            for i in range(1, end+1):
+                combination.extend(combinations(feature_values, i))
 
-        value = min(gini, key=gini.get)
-        return(value, gini)
+        return combination
 
 # very fast decision tree class, i.e. hoeffding tree
 class vfdt:
@@ -212,7 +291,7 @@ class vfdt:
     # tau  # used to deal with ties
     # nmin  # used to limit the G computations
 
-    def __init__(self, feature_values, delta=0.05, nmin=50, tau=0.05):
+    def __init__(self, feature_values, delta=0.05, nmin=50, tau=0.1):
         self.feature_values = feature_values
         self.delta = delta
         self.nmin = nmin
@@ -228,32 +307,22 @@ class vfdt:
         node.update_stats(example)
 
         result = node.splittable(self.delta, self.nmin, self.tau)
-
         if result != None:
             feature = result[0]
             value = result[1]
-            g = result[2]
-            left, right = self.node_split(node, feature, value)
-            node.add_children(feature, left, right)
-            left.parent = node
-            right.parent = node
-            if isinstance(value, int) or isinstance(value, float):
-                node.split_value = value
-            else:
-                values = list(self.feature_values[feature])
-                values.remove(value)
-                node.split_value = values
-
+            #print('SPLIT')
+            #print(feature, value)
+            self.node_split(node, feature)
+            node.split_value = value
 
     # split node, produce children
-    def node_split(self, node, split_feature, value):
+    def node_split(self, node, split_feature):
         features = node.possible_split_features
         # replace deleted split feature with None
         # new_features = [None if f == split_feature else f for f in features]
-
         left = vfdt_node(features)
         right = vfdt_node(features)
-        return(left, right)
+        node.add_children(split_feature, left, right)
 
     # predict test example's classification
     def predict(self, example):
@@ -269,19 +338,33 @@ class vfdt:
                 correct +=1
         return(float(correct) / len(examples))
 
+    def print_tree(self, node):
+        if node.is_leaf():
+            print('Leaf')
+        else:
+            print(node.split_feature)
+            self.print_tree(node.left_child)
+            self.print_tree(node.right_child)
 
 def test_run():
     start_time = time.time()
 
     # bank.csv whole data size: 4521
     # if more than 4521, it revert back to 4521
-    rows = 4500
+    rows = 4521
     # n_training = int(0.8 * rows)
     # read_csv has parameter nrows=n that read the first n rows
+    '''skiprows=1, index_col=0,'''
     df = pd.read_csv('bank.csv', nrows=rows, header=0, sep=';')
     title = list(df.columns.values)
-    #print(df)
     features = title[:-1]
+
+    ''' change month string to int '''
+    import calendar
+    d = dict((v.lower(),k) for k,v in enumerate(calendar.month_abbr))
+    df.month = df.month.map(d)
+    #print(df.head(10))
+
     # unique values for each feature to use in VFDT
     feature_values = {f:None for f in features}
     for f in features:
@@ -296,9 +379,9 @@ def test_run():
     count = 0
     for i in range(len(array)):
         count += 1
-        if (count <= 500):
+        if (count <= 1000):
             set1.append(array[i])
-        elif (count > 500 and count <= 2000):
+        elif (count > 1000 and count <= 2000):
             set2.append(array[i])
         else:
             set3.append(array[i])
@@ -316,10 +399,7 @@ def test_run():
     # the true mean is at least r - gamma
     # vfdt parameter nmin: test split if new sample size > nmin
 
-    delta = 0.05
-    nmin = 100
-    tau = 0.05
-    tree = vfdt(feature_values, delta, nmin, tau)
+    tree = vfdt(feature_values, delta=0.01, nmin=50, tau=0.1)
     print('Total data size: ', rows)
     print('Test set (tail): ', len(test_set))
     n = 0
@@ -330,8 +410,7 @@ def test_run():
         print('Training set:', n, end=', ')
         print('ACCURACY: %.4f' % tree.accuracy(test))
 
-    # print(tree.root.get_visualization('$'))
-
+    #tree.print_tree(tree.root)
     print("--- Running time: %.6f seconds ---" % (time.time() - start_time))
 
 if __name__ == "__main__":
