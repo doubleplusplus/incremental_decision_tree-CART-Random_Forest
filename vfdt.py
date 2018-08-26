@@ -374,10 +374,8 @@ def calc_metrics(y_test, y_pred, row_name):
 
 def test_run():
     start_time = time.time()
-
     # bank.csv whole data size: 4521
     # if more than 4521, it revert back to 4521
-    # n_training = int(0.8 * rows)
     # read_csv has parameter nrows=n that read the first n rows
     '''skiprows=1, index_col=0,'''
     df = pd.read_csv('./dataset/bank.csv', header=0, sep=';')
