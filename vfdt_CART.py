@@ -138,7 +138,6 @@ class VfdtNode:
             if feature is not None:
                 njk = nijk[feature]
                 if len(njk) == 1:
-                    gini = 0
                     Xa = feature
                     split_value = next(iter(njk))
                     if isinstance(split_value, str):
@@ -147,6 +146,7 @@ class VfdtNode:
                     else:
                         return [Xa, split_value]
                 gini, value = self.gini(feature)
+
                 if gini < min:
                     min = gini
                     Xa = feature
@@ -186,14 +186,11 @@ class VfdtNode:
         # if not isinstance(test, np.object):
         try:  # continuous feature values
             test += 0
-            sort = sorted([j for j in njk.keys()])
-            split = []
-            for i in range(1, len(sort)):
-                temp = (sort[i-1] + sort[i])/2
-                split.append(temp)
+            sort = np.array(sorted([j for j in njk.keys()]))
+            split = (sort[0:-1] + sort[1:])/2   # vectorized computation, like in R
 
             D1 = 0
-            D1_class_frequency = {j:0 for j in class_frequency.keys()}
+            D1_class_frequency = {j: 0 for j in class_frequency.keys()}
             for index in range(len(split)):
                 nk = njk[sort[index]]
 
@@ -227,7 +224,6 @@ class VfdtNode:
         except TypeError:
             length = len(njk)
             feature_values = list(njk.keys())
-            right = None
             if length > 10:  # too many discrete feature values, estimate
                 for j, k in njk.items():
                     D1 = sum(k.values())
@@ -260,26 +256,24 @@ class VfdtNode:
                 comb = self.select_combinations(feature_values)
                 for i in comb:
                     left = list(i)
-                    D1 = 0
-                    D2 = 0
                     D1_class_frequency = {key: 0 for key in class_frequency.keys()}
                     D2_class_frequency = {key: 0 for key in class_frequency.keys()}
                     for j,k in njk.items():
                         for key, value in class_frequency.items():
                             if j in left:
                                 if key in k:
-                                    D1 += sum(k.values())
                                     D1_class_frequency[key] += k[key]
                             else:
                                 if key in k:
-                                    D2 += sum(k.values())
                                     D2_class_frequency[key] += k[key]
                     g_d1 = 1
                     g_d2 = 1
+                    D1 = sum(D1_class_frequency.values())
+                    D2 = D - D1
                     for key, v in D1_class_frequency.items():
                         g_d1 -= (v/D1)**2
                     for key, v in D2_class_frequency.items():
-                        g_d2 -= (v/D1)**2
+                        g_d2 -= (v/D2)**2
                     g = g_d1*D1/D + g_d2*D2/D
                     if g < m1:
                         m1 = g
@@ -386,9 +380,9 @@ def test_run():
     # n_training = int(0.8 * rows)
     # read_csv has parameter nrows=n that read the first n rows
     '''skiprows=1, index_col=0,'''
-    # df = pd.read_csv('./dataset/bank.csv', header=0, sep=';')
-    df = pd.read_csv('./dataset/default_of_credit_card_clients.csv', skiprows=1, header=0)
-    df = df.drop(df.columns[0], axis=1)
+    df = pd.read_csv('./dataset/bank.csv', header=0, sep=';')
+    # df = pd.read_csv('./dataset/default_of_credit_card_clients.csv', skiprows=1, header=0)
+    # df = df.drop(df.columns[0], axis=1)
     df = df.sample(frac=1).reset_index(drop=True)  # shuffle data rows
     title = list(df.columns.values)
     features = title[:-1]
@@ -404,18 +398,18 @@ def test_run():
         feature_values[f] = df[f].unique()
 
     # convert df to data examples
-    n_training = 25000
+    n_training = 4000
     array = df.head(n_training).values
 
-    set1 = array[:5000, :]
-    set2 = array[5000:10000, :]
-    set3 = array[10000:, :]
+    set1 = array[:1000, :]
+    set2 = array[1000:3000, :]
+    set3 = array[3000:, :]
 
     # to simulate continuous training, modify the tree for each training set
     examples = [set1, set2, set3]
 
     # test set is different from training set
-    n_test = 5000
+    n_test = 500
     test_set = df.tail(n_test).values
     x_test = test_set[:, :-1]
     y_test = test_set[:, -1]
@@ -424,7 +418,7 @@ def test_run():
     # the true mean is at least r - gamma
     # Vfdt parameter nmin: test split if new sample size > nmin
 
-    tree = Vfdt(feature_values, delta=0.01, nmin=200, tau=0.05)
+    tree = Vfdt(feature_values, delta=0.01, nmin=300, tau=0.05)
     print('Total data size: ', rows)
     print('Training size size: ', n_training)
     print('Test set (tail): ', n_test)
