@@ -26,7 +26,6 @@ class VfdtNode:
         self.right_child = None
         self.split_feature = None
         self.split_value = None  # both continuous and discrete value
-        self.discrete_split_values = {}
         self.new_examples_seen = 0
         self.total_examples_seen = 0
         self.class_frequency = {}
@@ -40,10 +39,7 @@ class VfdtNode:
         self.right_child = right
         left.parent = self
         right.parent = self
-        discrete = self.discrete_split_values
 
-        left.discrete_split_values = discrete
-        right.discrete_split_values = discrete
         self.nijk.clear()  # reset stats
         if isinstance(split_value, list):
             left_value = split_value[0]
@@ -54,9 +50,6 @@ class VfdtNode:
             if len(right_value) <= 1:
                 new_features = [None if f == split_feature else f for f in right.possible_split_features]
                 right.possible_split_features = new_features
-
-            left.discrete_split_values[split_feature] = left_value
-            right.discrete_split_values[split_feature] = right_value
 
     def is_leaf(self):
         return self.left_child is None and self.right_child is None
@@ -141,7 +134,9 @@ class VfdtNode:
                 if len(njk) == 1:
                     return None
 
-                gini, value = self.gini(feature)
+                njk = self.nijk[feature]
+                class_frequency = self.class_frequency
+                gini, value = self.gini(njk, class_frequency)
                 if gini < min:
                     min = gini
                     Xa = feature
@@ -158,40 +153,35 @@ class VfdtNode:
                 return [Xa, split_value]
             else:
                 return None
-        else:
-            return None
+        return None
 
     def hoeffding_bound(self, delta):
         n = self.total_examples_seen
         R = np.log(len(self.class_frequency))
         return np.sqrt(R * R * np.log(1/delta) / (2 * n))
 
-    def gini(self, feature):
+    def gini(self, njk, class_frequency):
         # gini(D) = 1 - Sum(pi^2)
         # gini(D, F=f) = |D1|/|D|*gini(D1) + |D2|/|D|*gini(D2)
 
-        njk = self.nijk[feature]
         D = self.total_examples_seen
-        class_frequency = self.class_frequency
-
         m1 = 1  # minimum gini
         m2 = 1  # second minimum gini
         Xa_value = None
-        test = next(iter(njk))  # test j feature value
-        # if not isinstance(test, np.object):
+        feature_values = list(njk.keys())  # list() is essential
         try:  # continuous feature values
-            test += 0
-            sort = np.array(sorted([j for j in njk.keys()]))
+            feature_values[0] += 0
+            sort = np.array(sorted(feature_values))
             split = (sort[0:-1] + sort[1:])/2   # vectorized computation, like in R
 
-            D1 = 0
             D1_class_frequency = {j: 0 for j in class_frequency.keys()}
             for index in range(len(split)):
                 nk = njk[sort[index]]
 
                 for j in nk:
                     D1_class_frequency[j] += nk[j]
-                D1 += sum(nk.values())
+
+                D1 = sum(D1_class_frequency.values())
                 D2 = D - D1
                 g_d1 = 1
                 g_d2 = 1
@@ -211,17 +201,17 @@ class VfdtNode:
                 if g < m1:
                     m1 = g
                     Xa_value = split[index]
-                elif m1 < g < m2:
-                    m2 = g
+                # elif m1 < g < m2:
+                    # m2 = g
             return [m1, Xa_value]
 
         # discrete feature_values
         except TypeError:
             length = len(njk)
-            feature_values = list(njk.keys())
             if length > 10:  # too many discrete feature values, estimate
                 for j, k in njk.items():
                     D1 = sum(k.values())
+
                     D2 = D - D1
                     g_d1 = 1
                     g_d2 = 1
@@ -243,8 +233,8 @@ class VfdtNode:
                     if g < m1:
                         m1 = g
                         Xa_value = j
-                    elif m1 < g < m2:
-                        m2 = g
+                    # elif m1 < g < m2:
+                        # m2 = g
                 right = list(np.setdiff1d(feature_values, Xa_value))
 
             else:  # fewer discrete feature values, get combinations
@@ -273,8 +263,8 @@ class VfdtNode:
                     if g < m1:
                         m1 = g
                         Xa_value = left
-                    elif m1 < g < m2:
-                        m2 = g
+                    # elif m1 < g < m2:
+                        # m2 = g
                 right = list(np.setdiff1d(feature_values, Xa_value))
             return [m1, [Xa_value, right]]
 
@@ -380,11 +370,15 @@ def test_run():
     title = list(df.columns.values)
     features = title[:-1]
     rows = df.shape[0]
-    """# change month string to int
-    import calendar
-    d = dict((v.lower(),k) for k,v in enumerate(calendar.month_abbr))
-    df.month = df.month.map(d)
-    """
+
+    # change month string to int
+    def month_str_to_int(df1):
+        import calendar
+        d = dict((v.lower(),k) for k,v in enumerate(calendar.month_abbr))
+        df1.month = df1.month.map(d)
+    month_str_to_int(df)
+    # print(df.head(5)['month'])
+
     # unique values for each feature to use in VFDT
     feature_values = {f: None for f in features}
     for f in features:
@@ -414,7 +408,7 @@ def test_run():
     tree = Vfdt(feature_values, delta=0.01, nmin=150, tau=0.05)
     print('Total data size: ', rows)
     print('Training size size: ', n_training)
-    print('Test set (tail): ', n_test)
+    print('Test set size: ', n_test)
     n = 0
     for training_set in examples:
         n += len(training_set)

@@ -27,7 +27,6 @@ class EfdtNode:
         self.split_feature = None
         self.split_value = None
         self.split_g = None
-        # self.discrete_split_values = {}
         self.new_examples_seen = 0
         self.total_examples_seen = 0
         self.class_frequency = {}
@@ -53,7 +52,7 @@ class EfdtNode:
     def is_leaf(self):
         return self.left_child is None and self.right_child is None
 
-    # upadate node stats in order to calculate Gini
+    # update node stats in order to calculate Gini
     def update_stats(self, xij, label):
         feats = self.possible_split_features
         iterator = [f for f in feats if f is not None]
@@ -376,7 +375,6 @@ class EfdtNode:
         return combination
 
 
-# very fast decision tree class
 class Efdt:
     # parameters
     # feature_values  # number of values of each feature # dict
