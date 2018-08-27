@@ -121,7 +121,7 @@ class VfdtNode:
             X0 -= (k/n)**2
         return X0
 
-    # use hoeffding tree model to test node split, return the split feature
+    # use Hoeffding tree model to test node split, return the split feature
     def attempt_split(self, delta, nmin, tau):
         if self.new_examples_seen < nmin:
             return None
@@ -139,15 +139,9 @@ class VfdtNode:
             if feature is not None:
                 njk = nijk[feature]
                 if len(njk) == 1:
-                    Xa = feature
-                    split_value = next(iter(njk))
-                    if isinstance(split_value, str):
-                        # print(Xa, [[split_value],[]])
-                        return [Xa, [[split_value],[]]]
-                    else:
-                        return [Xa, split_value]
-                gini, value = self.gini(feature)
+                    return None
 
+                gini, value = self.gini(feature)
                 if gini < min:
                     min = gini
                     Xa = feature
@@ -416,8 +410,8 @@ def test_run():
     # heoffding bound parameter delta: with 1 - delta probability
     # the true mean is at least r - gamma
     # Vfdt parameter nmin: test split if new sample size > nmin
-
-    tree = Vfdt(feature_values, delta=0.01, nmin=300, tau=0.05)
+    # feature_values: unique values in every feature
+    tree = Vfdt(feature_values, delta=0.01, nmin=150, tau=0.05)
     print('Total data size: ', rows)
     print('Training size size: ', n_training)
     print('Test set (tail): ', n_test)

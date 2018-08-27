@@ -158,10 +158,10 @@ class EfdtNode:
     # test node split, return the split feature
     def attempt_split(self, delta, nmin, tau):
         if self.new_examples_seen < nmin:
-            return None
+            return
         class_frequency = self.class_frequency
         if len(class_frequency) <= 1:
-            return None
+            return
 
         self.new_examples_seen = 0  # reset
         nijk = self.nijk
@@ -173,34 +173,28 @@ class EfdtNode:
             if feature is not None:
                 njk = nijk[feature]
                 if len(njk) == 1:
-                    Xa = feature
-                    split_value = next(iter(njk))
-                    if isinstance(split_value, str):
-                        split_value = [[split_value],[]]
-                else:
-                    gini, value = self.gini(njk, class_frequency)
+                    return
 
-                    # print(gini)
-                    if gini < g_Xa:
-                        g_Xa = gini
-                        Xa = feature
-                        split_value = value
+                gini, value = self.gini(njk, class_frequency)
+                if gini < g_Xa:
+                    g_Xa = gini
+                    Xa = feature
+                    split_value = value
 
         sigma = self.hoeffding_bound(delta)
         g_X0 = self.check_not_splitting(class_frequency)
         g_Xb = g_X0
         if g_Xb - g_Xa > sigma and g_Xa != g_X0:
-            # print(g_Xa)
             self.split_g = g_Xa  # split on feature Xa
             # print('node split')
             self.node_split(Xa, split_value)
 
     def re_evaluate_split(self, delta, nmin, tau):
         if self.new_examples_seen < nmin:
-            return None
+            return
         class_frequency = self.class_frequency
         if len(class_frequency) <= 1:
-            return None
+            return
 
         self.new_examples_seen = 0  # reset
         nijk = self.nijk
@@ -212,21 +206,16 @@ class EfdtNode:
             if feature is not None:
                 njk = nijk[feature]
                 if len(njk) == 1:
+                    return
+
+                gini, value = self.gini(njk, class_frequency)
+                if gini < g_Xa:
+                    g_Xa = gini
                     Xa = feature
-                    split_value = next(iter(njk))
-                    if isinstance(split_value, str):
-                        split_value = [[split_value],[]]
-                else:
-                    gini, value = self.gini(njk, class_frequency)
-                    # print(gini)
-                    if gini < g_Xa:
-                        g_Xa = gini
-                        Xa = feature
-                        split_value = value
+                    split_value = value
 
         sigma = self.hoeffding_bound(delta)
         g_X0 = self.check_not_splitting(class_frequency)
-
         split_g = self.split_g  # gini of current split feature
         if split_g - g_Xa > sigma:
             if g_X0 < g_Xa:  # not split
@@ -235,7 +224,6 @@ class EfdtNode:
             elif Xa != self.split_feature:
                 # print('split on new feature')
                 self.split_g = g_Xa  # split on feature Xa
-                # print(g_Xa)
                 self.node_split(Xa, split_value)
 
     def kill_subtree(self):
@@ -485,8 +473,8 @@ def test_run():
     # heoffding bound parameter delta: with 1 - delta probability
     # the true mean is at least r - gamma
     # Efdt parameter nmin: test split if new sample size > nmin
-
-    tree = Efdt(feature_values, delta=0.01, nmin=100, tau=0.05)
+    # feature_values: unique values in every feature
+    tree = Efdt(feature_values, delta=0.01, nmin=150, tau=0.05)
     print('Total data size: ', rows)
     print('Test set (tail): ', len(test_set))
     n = 0
