@@ -146,14 +146,14 @@ class VfdtNode:
                 elif min < gini < second_min:
                     second_min = gini
 
-        sigma = self.hoeffding_bound(delta)
+        epsilon = self.hoeffding_bound(delta)
         g_X0 = self.check_not_splitting()
         if min < g_X0:
-            # print(second_min - min, sigma)
-            if second_min - min > sigma:
+            # print(second_min - min, epsilon)
+            if second_min - min > epsilon:
                 # print('1 node split')
                 return [Xa, split_value]
-            elif second_min - min < sigma < tau:
+            elif second_min - min < epsilon < tau:
                 # print('2 node split')
                 return [Xa, split_value]
             else:
@@ -403,12 +403,12 @@ def test_run():
     x_test = test_set[:, :-1]
     y_test = test_set[:, -1]
 
-    # heoffding bound parameter delta: with 1 - delta probability
-    # the true mean is at least r - gamma
-    # Vfdt parameter nmin: test split if new sample size > nmin
+    # Heoffding bound (epsilon) parameter delta: with 1 - delta probability
+    # the true mean is at least r_bar - epsilon
+    # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
-    # tie breaking: when difference is so small, split when diff_g < sigma < tau
-    tree = Vfdt(feature_values, delta=0.03, nmin=200, tau=0.07)
+    # tie breaking: when difference is so small, split when diff_g < epsilon < tau
+    tree = Vfdt(feature_values, delta=0.03, nmin=300, tau=0.05)
     print('Total data size: ', rows)
     print('Training size size: ', n_training)
     print('Test set size: ', n_test)

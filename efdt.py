@@ -109,6 +109,7 @@ class EfdtNode:
     # recursively trace down the tree
     def sort_example(self, x, y, delta, nmin, tau):
         self.update_stats(x, y)
+        self.re_evaluate_split(delta, nmin, tau)
         if self.is_leaf():
             self.attempt_split(delta, nmin, tau)
             return
@@ -122,17 +123,13 @@ class EfdtNode:
 
             if isinstance(split_value, list):  # discrete value
                 if value in split_value[0]:
-                    left.re_evaluate_split(delta, nmin, tau)
                     return left.sort_example(x, y, delta, nmin, tau)
                 else:
-                    right.re_evaluate_split(delta, nmin, tau)
                     return right.sort_example(x, y, delta, nmin, tau)
             else:  # continuous value
                 if value <= split_value:
-                    left.re_evaluate_split(delta, nmin, tau)
                     return left.sort_example(x, y, delta, nmin, tau)
                 else:
-                    right.re_evaluate_split(delta, nmin, tau)
                     return right.sort_example(x, y, delta, nmin, tau)
 
     def sort_to_predict(self, x):
@@ -179,21 +176,21 @@ class EfdtNode:
                     Xa = feature
                     split_value = value
 
-        sigma = self.hoeffding_bound(delta)
+        epsilon = self.hoeffding_bound(delta)
         g_X0 = self.check_not_splitting(class_frequency)
         g_Xb = g_X0
         if g_Xa < g_X0:
-            if g_Xb - g_Xa > sigma:
+            if g_Xb - g_Xa > epsilon:
                 self.split_g = g_Xa  # split on feature Xa
                 # print('1 node split')
                 self.node_split(Xa, split_value)
-            elif g_Xb - g_Xa < sigma < tau:
+            elif g_Xb - g_Xa < epsilon < tau:
                 self.split_g = g_Xa  # split on feature Xa
                 # print('2 node split')
                 self.node_split(Xa, split_value)
 
     def re_evaluate_split(self, delta, nmin, tau):
-        if self.new_examples_seen or self.is_leaf() < nmin:
+        if self.new_examples_seen < nmin or self.is_leaf():  # only re-evaluate non-leaf
             return
         class_frequency = self.class_frequency
         if len(class_frequency) <= 1:
@@ -217,14 +214,14 @@ class EfdtNode:
                     Xa = feature
                     split_value = value
 
-        sigma = self.hoeffding_bound(delta)
+        epsilon = self.hoeffding_bound(delta)
         g_X0 = self.check_not_splitting(class_frequency)
         split_g = self.split_g  # gini of current split feature
 
         if g_X0 < g_Xa:  # not split
             print('kill subtree')
             self.kill_subtree()
-        if split_g - g_Xa > sigma or split_g - g_Xa < sigma < tau:
+        if split_g - g_Xa > epsilon or split_g - g_Xa < epsilon < tau:
             if Xa != self.split_feature:
                 # print('split on new feature')
                 self.split_g = g_Xa  # split on feature Xa
@@ -472,12 +469,12 @@ def test_run():
     x_test = test_set[:, :-1]
     y_test = test_set[:, -1]
 
-    # heoffding bound parameter delta: with 1 - delta probability
-    # the true mean is at least r - gamma
+    # Heoffding bound (epsilon) parameter delta: with 1 - delta probability
+    # the true mean is at least r_bar - epsilon
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
-    # tie breaking: when difference is so small, split when diff_g < sigma < tau
-    tree = Efdt(feature_values, delta=0.03, nmin=100, tau=0.02)
+    # tie breaking: when difference is so small, split when diff_g < epsilon < tau
+    tree = Efdt(feature_values, delta=0.03, nmin=300, tau=0.03)
     print('Total data size: ', rows)
     print('Test set (tail): ', len(test_set))
     n = 0
