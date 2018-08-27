@@ -247,7 +247,7 @@ class EfdtNode:
         D = self.total_examples_seen
 
         m1 = 1  # minimum gini
-        m2 = 1  # second minimum gini
+        # m2 = 1  # second minimum gini
         Xa_value = None
         feature_values = list(njk.keys())  # list() is essential
         if not isinstance(feature_values[0], str):  # numeric feature values
@@ -283,8 +283,8 @@ class EfdtNode:
                 if g < m1:
                     m1 = g
                     Xa_value = split[index]
-                elif m1 < g < m2:
-                    m2 = g
+                # elif m1 < g < m2:
+                    # m2 = g
 
             return [m1, Xa_value]
 
@@ -315,8 +315,8 @@ class EfdtNode:
                     if g < m1:
                         m1 = g
                         Xa_value = j
-                    elif m1 < g < m2:
-                        m2 = g
+                    # elif m1 < g < m2:
+                        # m2 = g
                 right = list(np.setdiff1d(feature_values, Xa_value))
 
             else:  # fewer discrete feature values, get combinations
@@ -346,8 +346,8 @@ class EfdtNode:
                     if g < m1:
                         m1 = g
                         Xa_value = left
-                    elif m1 < g < m2:
-                        m2 = g
+                    # elif m1 < g < m2:
+                        # m2 = g
 
                 right = list(np.setdiff1d(feature_values, Xa_value))
             return [m1, [Xa_value, right]]
@@ -408,13 +408,13 @@ class Efdt:
     # predict test example's classification
     def predict(self, x_test):
         prediction = []
-        if isinstance(x_test, np.ndarray):
+        if isinstance(x_test, np.ndarray) or isinstance(x_test, list):
             for x in x_test:
                 leaf = self.root.sort_to_predict(x)
                 prediction.append(leaf.most_frequent())
             return prediction
         else:
-            leaf = self.root.sort_to_predict(x)
+            leaf = self.root.sort_to_predict(x_test)
             return leaf.most_frequent()
 
     def print_tree(self, node):

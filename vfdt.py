@@ -332,7 +332,7 @@ class Vfdt:
     # predict test example's classification
     def predict(self, x_test):
         prediction = []
-        if isinstance(x_test, np.ndarray):
+        if isinstance(x_test, np.ndarray) or isinstance(x_test, list):
             for x in x_test:
                 leaf = self.root.sort_example(x)
                 prediction.append(leaf.most_frequent())
@@ -408,7 +408,7 @@ def test_run():
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
     # tie breaking: when difference is so small, split when diff_g < epsilon < tau
-    tree = Vfdt(feature_values, delta=0.03, nmin=300, tau=0.05)
+    tree = Vfdt(feature_values, delta=0.03, nmin=300, tau=0.03)
     print('Total data size: ', rows)
     print('Training size size: ', n_training)
     print('Test set size: ', n_test)
