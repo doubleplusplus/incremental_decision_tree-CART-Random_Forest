@@ -62,14 +62,14 @@ class VfdtNode:
             index = self.possible_split_features.index(self.split_feature)
             value = x[index]
             split_value = self.split_value
-            try:  # continuous value
-                split_value += 0
-                if value <= split_value:
+
+            if isinstance(split_value, list):  # discrete value
+                if value in split_value[0]:
                     return self.left_child.sort_example(x)
                 else:
                     return self.right_child.sort_example(x)
-            except TypeError:  # discrete value
-                if value in split_value[0]:
+            else:  # continuous value
+                if value <= split_value:
                     return self.left_child.sort_example(x)
                 else:
                     return self.right_child.sort_example(x)
@@ -405,7 +405,7 @@ def test_run():
     # the true mean is at least r - gamma
     # Vfdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
-    tree = Vfdt(feature_values, delta=0.01, nmin=150, tau=0.05)
+    tree = Vfdt(feature_values, delta=0.01, nmin=100, tau=0.05)
     print('Total data size: ', rows)
     print('Training size size: ', n_training)
     print('Test set size: ', n_test)

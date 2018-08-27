@@ -59,7 +59,7 @@ class EfdtNode:
         for i in iterator:
             value = xij[feats.index(i)]
             if value not in self.nijk[i]:
-                self.nijk[i][value] = {label : 1}
+                self.nijk[i][value] = {label: 1}
             else:
                 try:
                     self.nijk[i][value][label] += 1
@@ -115,24 +115,28 @@ class EfdtNode:
             index = self.possible_split_features.index(self.split_feature)
             value = xij[index]
             split_value = self.split_value
-            try:  # continuous value
-                split_value += 0
-                if value <= split_value:
-                    left.update_stats(xij, label)
-                    left.re_evaluate_split(delta, nmin, tau)
-                    return left.sort_example(xij, label, delta, nmin, tau)
-                else:
-                    right.update_stats(xij, label)
-                    right.re_evaluate_split(delta, nmin, tau)
-                    return right.sort_example(xij, label, delta, nmin, tau)
-            except TypeError:  # discrete value
+
+            if isinstance(split_value, list):  # discrete value
                 if value in split_value[0]:
                     left.update_stats(xij, label)
-                    left.re_evaluate_split(delta, nmin, tau)
+                    if not left.is_leaf():
+                        left.re_evaluate_split(delta, nmin, tau)
                     return left.sort_example(xij, label, delta, nmin, tau)
                 else:
                     right.update_stats(xij, label)
-                    right.re_evaluate_split(delta, nmin, tau)
+                    if not right.is_leaf():
+                        right.re_evaluate_split(delta, nmin, tau)
+                    return right.sort_example(xij, label, delta, nmin, tau)
+            else:  # continuous value
+                if value <= split_value:
+                    left.update_stats(xij, label)
+                    if not left.is_leaf():
+                        left.re_evaluate_split(delta, nmin, tau)
+                    return left.sort_example(xij, label, delta, nmin, tau)
+                else:
+                    right.update_stats(xij, label)
+                    if not right.is_leaf():
+                        right.re_evaluate_split(delta, nmin, tau)
                     return right.sort_example(xij, label, delta, nmin, tau)
 
     def sort_to_predict(self, x):
@@ -142,14 +146,13 @@ class EfdtNode:
             index = self.possible_split_features.index(self.split_feature)
             value = x[index]
             split_value = self.split_value
-            try:  # continuous value
-                split_value += 0
-                if value <= split_value:
+            if isinstance(split_value, list):  # discrete value
+                if value in split_value[0]:
                     return self.left_child.sort_to_predict(x)
                 else:
                     return self.right_child.sort_to_predict(x)
-            except TypeError:  # discrete value
-                if value in split_value[0]:
+            else:  # continuous value
+                if value <= split_value:
                     return self.left_child.sort_to_predict(x)
                 else:
                     return self.right_child.sort_to_predict(x)
@@ -216,6 +219,7 @@ class EfdtNode:
         sigma = self.hoeffding_bound(delta)
         g_X0 = self.check_not_splitting(class_frequency)
         split_g = self.split_g  # gini of current split feature
+
         if split_g - g_Xa > sigma:
             if g_X0 < g_Xa:  # not split
                 print('kill subtree')
@@ -224,6 +228,7 @@ class EfdtNode:
                 # print('split on new feature')
                 self.split_g = g_Xa  # split on feature Xa
                 self.node_split(Xa, split_value)
+
 
     def kill_subtree(self):
         if not self.is_leaf():
@@ -247,11 +252,10 @@ class EfdtNode:
         m1 = 1  # minimum gini
         m2 = 1  # second minimum gini
         Xa_value = None
-        test = next(iter(njk))  # test j value
-        # if not isinstance(test, np.object):
+        feature_values = list(njk.keys())  # list() is essential
         try:  # continous feature values
-            test += 0
-            sort = np.array(sorted([j for j in njk.keys()]))
+            feature_values[0] += 0
+            sort = np.array(sorted(feature_values))
             split = (sort[0:-1] + sort[1:])/2   # vectorized computation, like in R
 
             D1 = 0
@@ -289,8 +293,6 @@ class EfdtNode:
         # discrete feature_values
         except TypeError:
             length = len(njk)
-            feature_values = list(njk.keys())
-
             if length > 9:  # too many discrete feature values, estimate
                 for j, k in njk.items():
                     D1 = sum(k.values())
@@ -472,9 +474,9 @@ def test_run():
     # the true mean is at least r - gamma
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
-    tree = Efdt(feature_values, delta=0.01, nmin=150, tau=0.05)
+    tree = Efdt(feature_values, delta=0.01, nmin=100, tau=0.05)
     print('Total data size: ', rows)
-    print('Test set size: ', len(test_set))
+    print('Test set (tail): ', len(test_set))
     n = 0
     for training_set in examples:
         n += len(training_set)
