@@ -8,4 +8,4 @@ This implementation is based on the Hoeffding Tree i.e. very fast decision tree 
 
 This is the first version of my python implementation of VFDT. I will try to improve on it. The code is tested on dataset downloaded from UCI data base.
 
-Another newly published paper extends this model： "Extremely Fast Decision Tree" by Manapragada, Webb & Salehi 2018. As new data instances come in, EFDT can dynamically modify existing model, re-evaluate previous split or kill subtree. Now EFDT is available. But it runs slower than VFDT.
+Another newly published paper extends this model： "Extremely Fast Decision Tree" by Manapragada, Webb & Salehi (2018). As new data instances come in, EFDT can dynamically modify existing model, re-evaluate previous split or kill subtree. Now EFDT is available. But it runs slower than VFDT.
