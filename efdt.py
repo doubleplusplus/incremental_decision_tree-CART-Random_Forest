@@ -474,7 +474,7 @@ def test_run():
     # feature_values: unique values in every feature
     tree = Efdt(feature_values, delta=0.01, nmin=150, tau=0.05)
     print('Total data size: ', rows)
-    print('Test set (tail): ', len(test_set))
+    print('Test set size: ', len(test_set))
     n = 0
     for training_set in examples:
         n += len(training_set)
