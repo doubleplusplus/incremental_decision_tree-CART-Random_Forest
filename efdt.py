@@ -30,7 +30,7 @@ class EfdtNode:
         self.new_examples_seen = 0
         self.total_examples_seen = 0
         self.class_frequency = {}
-        self.nijk = {i:{} for i in possible_split_features}
+        self.nijk = {i: {} for i in possible_split_features}
         self.possible_split_features = possible_split_features
 
     def add_children(self, left, right, split_feature, split_value):
@@ -38,6 +38,7 @@ class EfdtNode:
         self.right_child = right
         left.parent = self
         right.parent = self
+        self.nijk = {i: {} for i in self.nijk.keys()}
 
         if isinstance(split_value, list):
             left_value = split_value[0]
@@ -53,25 +54,28 @@ class EfdtNode:
         return self.left_child is None and self.right_child is None
 
     # update node stats in order to calculate Gini
-    def update_stats(self, xij, label):
+    def update_stats(self, x, y):
+        nijk = self.nijk
         feats = self.possible_split_features
         iterator = [f for f in feats if f is not None]
         for i in iterator:
-            value = xij[feats.index(i)]
-            if value not in self.nijk[i]:
-                self.nijk[i][value] = {label: 1}
+            value = x[feats.index(i)]
+
+            if value not in nijk[i]:
+                nijk[i][value] = {y: 1}
             else:
                 try:
-                    self.nijk[i][value][label] += 1
+                    nijk[i][value][y] += 1
                 except KeyError:
-                    self.nijk[i][value][label] = 1
+                    nijk[i][value][y] = 1
 
         self.total_examples_seen += 1
         self.new_examples_seen += 1
+        class_frequency = self.class_frequency
         try:
-            self.class_frequency[label] += 1
+            class_frequency[y] += 1
         except KeyError:
-            self.class_frequency[label] = 1
+            class_frequency[y] = 1
 
     # the most frequent classification
     def most_frequent(self):
@@ -103,9 +107,9 @@ class EfdtNode:
         self.add_children(left, right, split_feature, split_value)
 
     # recursively trace down the tree
-    def sort_example(self, xij, label, delta, nmin, tau):
+    def sort_example(self, x, y, delta, nmin, tau):
+        self.update_stats(x, y)
         if self.is_leaf():
-            self.update_stats(xij, label)
             self.attempt_split(delta, nmin, tau)
             return
         else:
@@ -113,31 +117,23 @@ class EfdtNode:
             right = self.right_child
 
             index = self.possible_split_features.index(self.split_feature)
-            value = xij[index]
+            value = x[index]
             split_value = self.split_value
 
             if isinstance(split_value, list):  # discrete value
                 if value in split_value[0]:
-                    left.update_stats(xij, label)
-                    if not left.is_leaf():
-                        left.re_evaluate_split(delta, nmin, tau)
-                    return left.sort_example(xij, label, delta, nmin, tau)
+                    left.re_evaluate_split(delta, nmin, tau)
+                    return left.sort_example(x, y, delta, nmin, tau)
                 else:
-                    right.update_stats(xij, label)
-                    if not right.is_leaf():
-                        right.re_evaluate_split(delta, nmin, tau)
-                    return right.sort_example(xij, label, delta, nmin, tau)
+                    right.re_evaluate_split(delta, nmin, tau)
+                    return right.sort_example(x, y, delta, nmin, tau)
             else:  # continuous value
                 if value <= split_value:
-                    left.update_stats(xij, label)
-                    if not left.is_leaf():
-                        left.re_evaluate_split(delta, nmin, tau)
-                    return left.sort_example(xij, label, delta, nmin, tau)
+                    left.re_evaluate_split(delta, nmin, tau)
+                    return left.sort_example(x, y, delta, nmin, tau)
                 else:
-                    right.update_stats(xij, label)
-                    if not right.is_leaf():
-                        right.re_evaluate_split(delta, nmin, tau)
-                    return right.sort_example(xij, label, delta, nmin, tau)
+                    right.re_evaluate_split(delta, nmin, tau)
+                    return right.sort_example(x, y, delta, nmin, tau)
 
     def sort_to_predict(self, x):
         if self.is_leaf():
@@ -186,13 +182,18 @@ class EfdtNode:
         sigma = self.hoeffding_bound(delta)
         g_X0 = self.check_not_splitting(class_frequency)
         g_Xb = g_X0
-        if g_Xb - g_Xa > sigma and g_Xa != g_X0:
-            self.split_g = g_Xa  # split on feature Xa
-            # print('node split')
-            self.node_split(Xa, split_value)
+        if g_Xa < g_X0:
+            if g_Xb - g_Xa > sigma:
+                self.split_g = g_Xa  # split on feature Xa
+                # print('1 node split')
+                self.node_split(Xa, split_value)
+            elif g_Xb - g_Xa < sigma < tau:
+                self.split_g = g_Xa  # split on feature Xa
+                # print('2 node split')
+                self.node_split(Xa, split_value)
 
     def re_evaluate_split(self, delta, nmin, tau):
-        if self.new_examples_seen < nmin:
+        if self.new_examples_seen or self.is_leaf() < nmin:
             return
         class_frequency = self.class_frequency
         if len(class_frequency) <= 1:
@@ -220,15 +221,14 @@ class EfdtNode:
         g_X0 = self.check_not_splitting(class_frequency)
         split_g = self.split_g  # gini of current split feature
 
-        if split_g - g_Xa > sigma:
-            if g_X0 < g_Xa:  # not split
-                print('kill subtree')
-                self.kill_subtree()
-            elif Xa != self.split_feature:
+        if g_X0 < g_Xa:  # not split
+            print('kill subtree')
+            self.kill_subtree()
+        if split_g - g_Xa > sigma or split_g - g_Xa < sigma < tau:
+            if Xa != self.split_feature:
                 # print('split on new feature')
                 self.split_g = g_Xa  # split on feature Xa
                 self.node_split(Xa, split_value)
-
 
     def kill_subtree(self):
         if not self.is_leaf():
@@ -253,9 +253,10 @@ class EfdtNode:
         m2 = 1  # second minimum gini
         Xa_value = None
         feature_values = list(njk.keys())  # list() is essential
-        try:  # continous feature values
-            feature_values[0] += 0
+        if not isinstance(feature_values[0], str):  # numeric feature values
+
             sort = np.array(sorted(feature_values))
+
             split = (sort[0:-1] + sort[1:])/2   # vectorized computation, like in R
 
             D1 = 0
@@ -290,8 +291,7 @@ class EfdtNode:
 
             return [m1, Xa_value]
 
-        # discrete feature_values
-        except TypeError:
+        else:  # discrete feature_values
             length = len(njk)
             if length > 9:  # too many discrete feature values, estimate
                 for j, k in njk.items():
@@ -373,7 +373,6 @@ class EfdtNode:
             end = int((e-1)/2)
             for i in range(1, end+1):
                 combination.extend(combinations(feature_values, i))
-
         return combination
 
 
@@ -435,20 +434,23 @@ def test_run():
 
     # bank.csv whole data size: 4521
     # if more than 4521, it revert back to 4521
-    rows = 4500
     # n_training = int(0.8 * rows)
     # read_csv has parameter nrows=n that read the first n rows
     '''skiprows=1, index_col=0,'''
-    df = pd.read_csv('./dataset/bank.csv', nrows=rows, header=0, sep=';')
-    # df = pd.read_csv('default_of_credit_card_clients.csv', nrows=rows, skiprows=1, header=0)
+    df = pd.read_csv('./dataset/bank.csv', header=0, sep=';')
+    # df = pd.read_csv('./dataset/default_of_credit_card_clients.csv', skiprows=1, header=0)
+    # df = df.drop(df.columns[0], axis=1)
     df = df.sample(frac=1).reset_index(drop=True)  # shuffle data rows
     title = list(df.columns.values)
     features = title[:-1]
+    rows = df.shape[0]
 
     ''' change month string to int '''
-    import calendar
-    d = dict((v.lower(),k) for k,v in enumerate(calendar.month_abbr))
-    df.month = df.month.map(d)
+    def month_str_to_int(df1):
+        import calendar
+        d = dict((v.lower(),k) for k,v in enumerate(calendar.month_abbr))
+        df1.month = df1.month.map(d)
+    month_str_to_int(df)
 
     # unique values for each feature to use in VFDT
     feature_values = {f:None for f in features}
@@ -474,7 +476,7 @@ def test_run():
     # the true mean is at least r - gamma
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
-    tree = Efdt(feature_values, delta=0.01, nmin=100, tau=0.05)
+    tree = Efdt(feature_values, delta=0.03, nmin=100, tau=0.02)
     print('Total data size: ', rows)
     print('Test set (tail): ', len(test_set))
     n = 0

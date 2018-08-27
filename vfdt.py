@@ -87,23 +87,25 @@ class VfdtNode:
     # update leaf stats in order to calculate infomation gain
     def update_stats(self, x, y):
         feats = self.possible_split_features
+        nijk = self.nijk
         iterator = [f for f in feats if f is not None]
         for i in iterator:
             value = x[feats.index(i)]
-            if value not in self.nijk[i]:
-                self.nijk[i][value] = {y: 1}
+            if value not in nijk[i]:
+                nijk[i][value] = {y: 1}
             else:
                 try:
-                    self.nijk[i][value][y] += 1
+                    nijk[i][value][y] += 1
                 except KeyError:
-                    self.nijk[i][value][y] = 1
+                    nijk[i][value][y] = 1
 
         self.total_examples_seen += 1
         self.new_examples_seen += 1
+        class_frequency = self.class_frequency
         try:
-            self.class_frequency[y] += 1
+            class_frequency[y] += 1
         except KeyError:
-            self.class_frequency[y] = 1
+            class_frequency[y] = 1
 
     def check_not_splitting(self):
         # compute gini index for not splitting
@@ -147,9 +149,12 @@ class VfdtNode:
         sigma = self.hoeffding_bound(delta)
         g_X0 = self.check_not_splitting()
         if min < g_X0:
+            # print(second_min - min, sigma)
             if second_min - min > sigma:
+                # print('1 node split')
                 return [Xa, split_value]
-            elif sigma < tau and second_min - min < tau:
+            elif second_min - min < sigma < tau:
+                # print('2 node split')
                 return [Xa, split_value]
             else:
                 return None
@@ -166,18 +171,16 @@ class VfdtNode:
 
         D = self.total_examples_seen
         m1 = 1  # minimum gini
-        m2 = 1  # second minimum gini
+        # m2 = 1  # second minimum gini
         Xa_value = None
         feature_values = list(njk.keys())  # list() is essential
-        try:  # continuous feature values
-            feature_values[0] += 0
+        if not isinstance(feature_values[0], str):  # numeric  feature values
             sort = np.array(sorted(feature_values))
             split = (sort[0:-1] + sort[1:])/2   # vectorized computation, like in R
 
             D1_class_frequency = {j: 0 for j in class_frequency.keys()}
             for index in range(len(split)):
                 nk = njk[sort[index]]
-
                 for j in nk:
                     D1_class_frequency[j] += nk[j]
 
@@ -205,8 +208,7 @@ class VfdtNode:
                     # m2 = g
             return [m1, Xa_value]
 
-        # discrete feature_values
-        except TypeError:
+        else:  # discrete feature_values
             length = len(njk)
             if length > 10:  # too many discrete feature values, estimate
                 for j, k in njk.items():
@@ -389,8 +391,8 @@ def test_run():
     array = df.head(n_training).values
 
     set1 = array[:1000, :]
-    set2 = array[1000:3000, :]
-    set3 = array[3000:, :]
+    set2 = array[1000:2000, :]
+    set3 = array[2000:, :]
 
     # to simulate continuous training, modify the tree for each training set
     examples = [set1, set2, set3]
@@ -405,7 +407,8 @@ def test_run():
     # the true mean is at least r - gamma
     # Vfdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
-    tree = Vfdt(feature_values, delta=0.01, nmin=100, tau=0.05)
+    # tie breaking: when difference is so small, split when delta_g < sigma < tau
+    tree = Vfdt(feature_values, delta=0.03, nmin=200, tau=0.07)
     print('Total data size: ', rows)
     print('Training size size: ', n_training)
     print('Test set size: ', n_test)
