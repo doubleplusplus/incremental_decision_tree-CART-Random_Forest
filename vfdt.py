@@ -414,7 +414,7 @@ def test_run():
     tree = Vfdt(feature_values, delta=0.01, nmin=150, tau=0.05)
     print('Total data size: ', rows)
     print('Training size size: ', n_training)
-    print('Test set (tail): ', n_test)
+    print('Test set size: ', n_test)
     n = 0
     for training_set in examples:
         n += len(training_set)
