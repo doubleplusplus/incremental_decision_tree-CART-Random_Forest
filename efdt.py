@@ -19,8 +19,11 @@ from sklearn.metrics import accuracy_score
 
 # EFDT node class
 class EfdtNode:
-    # parameter nijk: statistics of feature i, value j, class k
     def __init__(self, possible_split_features):
+        """
+        nijk: statistics of feature i, value j, class
+        :list possible_split_features: features
+        """
         self.parent = None
         self.left_child = None
         self.right_child = None
@@ -374,19 +377,17 @@ class EfdtNode:
 
 
 class Efdt:
-    # parameters
-    # feature_values  # number of values of each feature # dict
-    # feature_values = {feature:[unique values list]}
-    # delta   # used for hoeffding bound
-    # tau  # used to deal with ties
-    # nmin  # used to limit the G computations
-
-    def __init__(self, feature_values, delta=0.05, nmin=50, tau=0.1):
-        self.feature_values = feature_values
+    def __init__(self, features, delta=0.05, nmin=50, tau=0.1):
+        """
+        :features: list of data features
+        :delta: used to compute hoeffding bound, error rate
+        :nmin: to limit the G computations
+        :tau: to deal with ties
+        """
+        self.features = features
         self.delta = delta
         self.nmin = nmin
         self.tau = tau
-        features = list(feature_values.keys())
         self.root = EfdtNode(features)
         self.n_examples_processed = 0
 
@@ -449,11 +450,6 @@ def test_run():
         df1.month = df1.month.map(d)
     month_str_to_int(df)
 
-    # unique values for each feature to use in VFDT
-    feature_values = {f:None for f in features}
-    for f in features:
-        feature_values[f] = df[f].unique()
-
     # convert df to data examples
     array = df.head(4000).values
     set1 = array[:1000, :]
@@ -474,7 +470,7 @@ def test_run():
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
     # tie breaking: when difference is so small, split when diff_g < epsilon < tau
-    tree = Efdt(feature_values, delta=0.03, nmin=300, tau=0.03)
+    tree = Efdt(features, delta=0.01, nmin=300, tau=0.03)
     print('Total data size: ', rows)
     print('Test set (tail): ', len(test_set))
     n = 0

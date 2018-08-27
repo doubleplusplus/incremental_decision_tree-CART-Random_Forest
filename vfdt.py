@@ -19,8 +19,11 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 # VFDT node class
 class VfdtNode:
-    # parameter nijk: statistics of feature i, value j, class k
     def __init__(self, possible_split_features):
+        """
+        nijk: statistics of feature i, value j, class
+        :list possible_split_features: features
+        """
         self.parent = None
         self.left_child = None
         self.right_child = None
@@ -29,7 +32,7 @@ class VfdtNode:
         self.new_examples_seen = 0
         self.total_examples_seen = 0
         self.class_frequency = {}
-        self.nijk = {i: {} for i in possible_split_features}
+        self.nijk = {f: {} for f in possible_split_features}
         self.possible_split_features = possible_split_features
 
     def add_children(self, split_feature, split_value, left, right):
@@ -44,6 +47,7 @@ class VfdtNode:
         if isinstance(split_value, list):
             left_value = split_value[0]
             right_value = split_value[1]
+            # discrete split value list's length = 1, stop splitting
             if len(left_value) <= 1:
                 new_features = [None if f == split_feature else f for f in left.possible_split_features]
                 left.possible_split_features = new_features
@@ -120,11 +124,11 @@ class VfdtNode:
     def attempt_split(self, delta, nmin, tau):
         if self.new_examples_seen < nmin:
             return None
-        if len(self.class_frequency) == 1:
+        class_frequency = self.class_frequency
+        if len(class_frequency) == 1:
             return None
 
         self.new_examples_seen = 0  # reset
-
         nijk = self.nijk
         min = 1
         second_min = 1
@@ -137,7 +141,6 @@ class VfdtNode:
                     return None
 
                 njk = self.nijk[feature]
-                class_frequency = self.class_frequency
                 gini, value = self.gini(njk, class_frequency)
                 if gini < min:
                     min = gini
@@ -183,7 +186,6 @@ class VfdtNode:
                 nk = njk[sort[index]]
                 for j in nk:
                     D1_class_frequency[j] += nk[j]
-
                 D1 = sum(D1_class_frequency.values())
                 D2 = D - D1
                 g_d1 = 1
@@ -197,9 +199,9 @@ class VfdtNode:
                         D2_class_frequency[key] = value
 
                 for key, v in D1_class_frequency.items():
-                    g_d1 -= (v/float(D1))**2
+                    g_d1 -= (v/D1)**2
                 for key, v in D2_class_frequency.items():
-                    g_d2 -= (v/float(D2))**2
+                    g_d2 -= (v/D2)**2
                 g = g_d1*D1/D + g_d2*D2/D
                 if g < m1:
                     m1 = g
@@ -293,19 +295,17 @@ class VfdtNode:
 
 # very fast decision tree class, i.e. hoeffding tree
 class Vfdt:
-    # parameters
-    # feature_values  # number of values of each feature # dict
-    # feature_values = {feature:[unique values list]}
-    # delta   # used for hoeffding bound
-    # tau  # used to deal with ties
-    # nmin  # used to limit the G computations
-
-    def __init__(self, feature_values, delta=0.01, nmin=100, tau=0.1):
-        self.feature_values = feature_values
+    def __init__(self, features, delta=0.01, nmin=100, tau=0.1):
+        """
+        :features: list of data features
+        :delta: used to compute hoeffding bound, error rate
+        :nmin: to limit the G computations
+        :tau: to deal with ties
+        """
+        self.features = features
         self.delta = delta
         self.nmin = nmin
         self.tau = tau
-        features = list(feature_values.keys())
         self.root = VfdtNode(features)
         self.n_examples_processed = 0
 
@@ -362,9 +362,7 @@ def calc_metrics(y_test, y_pred, row_name):
 def test_run():
     start_time = time.time()
     # bank.csv whole data size: 4521
-    # if more than 4521, it revert back to 4521
-    # read_csv has parameter nrows=n that read the first n rows
-    '''skiprows=1, index_col=0,'''
+    # skiprows=1, nrows=n
     df = pd.read_csv('./dataset/bank.csv', header=0, sep=';')
     # df = pd.read_csv('./dataset/default_of_credit_card_clients.csv', skiprows=1, header=0)
     # df = df.drop(df.columns[0], axis=1)
@@ -380,12 +378,6 @@ def test_run():
         df1.month = df1.month.map(d)
     month_str_to_int(df)
     # print(df.head(5)['month'])
-
-    # unique values for each feature to use in VFDT
-    feature_values = {f: None for f in features}
-    for f in features:
-        feature_values[f] = df[f].unique()
-
     # convert df to data examples
     n_training = 4000
     array = df.head(n_training).values
@@ -408,7 +400,7 @@ def test_run():
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
     # tie breaking: when difference is so small, split when diff_g < epsilon < tau
-    tree = Vfdt(feature_values, delta=0.03, nmin=300, tau=0.03)
+    tree = Vfdt(features, delta=0.01, nmin=300, tau=0.03)
     print('Total data size: ', rows)
     print('Training size size: ', n_training)
     print('Test set size: ', n_test)
