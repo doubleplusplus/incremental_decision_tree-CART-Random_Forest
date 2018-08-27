@@ -427,12 +427,7 @@ class Efdt:
 
 def test_run():
     start_time = time.time()
-
-    # bank.csv whole data size: 4521
-    # if more than 4521, it revert back to 4521
-    # n_training = int(0.8 * rows)
-    # read_csv has parameter nrows=n that read the first n rows
-    '''skiprows=1, index_col=0,'''
+    # bank.csv whole data size: 4521 # skiprows=1, nrows=n
     df = pd.read_csv('./dataset/bank.csv', header=0, sep=';')
     # df = pd.read_csv('./dataset/default_of_credit_card_clients.csv', skiprows=1, header=0)
     # df = df.drop(df.columns[0], axis=1)

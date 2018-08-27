@@ -361,8 +361,7 @@ def calc_metrics(y_test, y_pred, row_name):
 
 def test_run():
     start_time = time.time()
-    # bank.csv whole data size: 4521
-    # skiprows=1, nrows=n
+    # bank.csv whole data size: 4521  # skiprows=1, nrows=n
     df = pd.read_csv('./dataset/bank.csv', header=0, sep=';')
     # df = pd.read_csv('./dataset/default_of_credit_card_clients.csv', skiprows=1, header=0)
     # df = df.drop(df.columns[0], axis=1)
