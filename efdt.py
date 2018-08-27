@@ -476,6 +476,7 @@ def test_run():
     # the true mean is at least r - gamma
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
+    # tie breaking: when difference is so small, split when diff_g < sigma < tau
     tree = Efdt(feature_values, delta=0.03, nmin=100, tau=0.02)
     print('Total data size: ', rows)
     print('Test set (tail): ', len(test_set))

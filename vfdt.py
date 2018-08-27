@@ -407,7 +407,7 @@ def test_run():
     # the true mean is at least r - gamma
     # Vfdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
-    # tie breaking: when difference is so small, split when delta_g < sigma < tau
+    # tie breaking: when difference is so small, split when diff_g < sigma < tau
     tree = Vfdt(feature_values, delta=0.03, nmin=200, tau=0.07)
     print('Total data size: ', rows)
     print('Training size size: ', n_training)
