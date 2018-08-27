@@ -254,9 +254,7 @@ class EfdtNode:
         Xa_value = None
         feature_values = list(njk.keys())  # list() is essential
         if not isinstance(feature_values[0], str):  # numeric feature values
-
             sort = np.array(sorted(feature_values))
-
             split = (sort[0:-1] + sort[1:])/2   # vectorized computation, like in R
 
             D1 = 0
@@ -279,9 +277,9 @@ class EfdtNode:
                         D2_class_frequency[key] = value
 
                 for key, v in D1_class_frequency.items():
-                    g_d1 -= (v/float(D1))**2
+                    g_d1 -= (v/D1)**2
                 for key, v in D2_class_frequency.items():
-                    g_d2 -= (v/float(D2))**2
+                    g_d2 -= (v/D2)**2
                 g = g_d1*D1/D + g_d2*D2/D
                 if g < m1:
                     m1 = g
