@@ -199,15 +199,11 @@ class EfdtNode:
         self.new_examples_seen = 0  # reset
         nijk = self.nijk
         g_Xa = 1
-
         Xa = ''
         split_value = None
         for feature in self.possible_split_features:
             if feature is not None:
                 njk = nijk[feature]
-                if len(njk) == 1:
-                    return
-
                 gini, value = self.gini(njk, class_frequency)
                 if gini < g_Xa:
                     g_Xa = gini
