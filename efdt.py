@@ -9,10 +9,10 @@
 # 06/06/2018
 # ver 0.01
 
-
+import time
 import numpy as np
 import pandas as pd
-import time
+from multiprocessing import Pool
 from itertools import combinations
 from sklearn.metrics import accuracy_score
 
@@ -239,7 +239,6 @@ class EfdtNode:
     def gini(self, njk, class_frequency):
         # Gini(D) = 1 - Sum(pi^2)
         # Gini(D, F=f) = |D1|/|D|*Gini(D1) + |D2|/|D|*Gini(D2)
-
         D = self.total_examples_seen
         m1 = 1  # minimum gini
         # m2 = 1  # second minimum gini
@@ -433,7 +432,8 @@ def test_run():
     month_str_to_int(df)
 
     # convert df to data examples
-    array = df.head(4000).values
+    training_size = 4000
+    array = df.head(training_size).values
     set1 = array[:1000, :]
     set2 = array[1000:2000, :]
     set3 = array[2000:, :]
@@ -454,7 +454,8 @@ def test_run():
     # tie breaking: when difference is so small, split when diff_g < epsilon < tau
     tree = Efdt(features, delta=0.01, nmin=260, tau=0.02)
     print('Total data size: ', rows)
-    print('Test set (tail): ', len(test_set))
+    print('Training size: ', training_size)
+    print('Test set size: ', n_test)
     n = 0
     for training_set in examples:
         n += len(training_set)

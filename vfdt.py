@@ -395,7 +395,7 @@ def test_run():
     # tie breaking: when difference is so small, split when diff_g < epsilon < tau
     tree = Vfdt(features, delta=0.01, nmin=300, tau=0.03)
     print('Total data size: ', rows)
-    print('Training size size: ', n_training)
+    print('Training size: ', n_training)
     print('Test set size: ', n_test)
     n = 0
     for training_set in examples:
