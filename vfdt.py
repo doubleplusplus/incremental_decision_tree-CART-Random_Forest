@@ -137,10 +137,6 @@ class VfdtNode:
         for feature in self.possible_split_features:
             if feature is not None:
                 njk = nijk[feature]
-                if len(njk) == 1:
-                    return None
-
-                njk = self.nijk[feature]
                 gini, value = self.gini(njk, class_frequency)
                 if gini < min:
                     min = gini
@@ -215,7 +211,6 @@ class VfdtNode:
             if length > 10:  # too many discrete feature values, estimate
                 for j, k in njk.items():
                     D1 = sum(k.values())
-
                     D2 = D - D1
                     g_d1 = 1
                     g_d2 = 1
@@ -226,7 +221,6 @@ class VfdtNode:
                             D2_class_frequency[key] = value - k[key]
                         else:
                             D2_class_frequency[key] = value
-
                     for key, v in k.items():
                         g_d1 -= (v/D1)**2
 

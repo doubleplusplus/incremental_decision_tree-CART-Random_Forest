@@ -170,9 +170,6 @@ class EfdtNode:
         for feature in self.possible_split_features:
             if feature is not None:
                 njk = nijk[feature]
-                if len(njk) == 1:
-                    return
-
                 gini, value = self.gini(njk, class_frequency)
                 if gini < g_Xa:
                     g_Xa = gini
@@ -248,7 +245,6 @@ class EfdtNode:
         # Gini(D, F=f) = |D1|/|D|*Gini(D1) + |D2|/|D|*Gini(D2)
 
         D = self.total_examples_seen
-
         m1 = 1  # minimum gini
         # m2 = 1  # second minimum gini
         Xa_value = None
@@ -257,14 +253,13 @@ class EfdtNode:
             sort = np.array(sorted(feature_values))
             split = (sort[0:-1] + sort[1:])/2   # vectorized computation, like in R
 
-            D1 = 0
             D1_class_frequency = {j:0 for j in class_frequency.keys()}
             for index in range(len(split)):
                 nk = njk[sort[index]]
 
                 for j in nk:
                     D1_class_frequency[j] += nk[j]
-                D1 += sum(nk.values())
+                D1 = sum(D1_class_frequency.values())
                 D2 = D - D1
                 g_d1 = 1
                 g_d2 = 1
@@ -304,7 +299,6 @@ class EfdtNode:
                             D2_class_frequency[key] = value - k[key]
                         else:
                             D2_class_frequency[key] = value
-
                     for key, v in k.items():
                         g_d1 -= (v/D1)**2
 
@@ -349,7 +343,6 @@ class EfdtNode:
                         Xa_value = left
                     # elif m1 < g < m2:
                         # m2 = g
-
                 right = list(np.setdiff1d(feature_values, Xa_value))
             return [m1, [Xa_value, right]]
 
@@ -463,7 +456,7 @@ def test_run():
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
     # tie breaking: when difference is so small, split when diff_g < epsilon < tau
-    tree = Efdt(features, delta=0.01, nmin=300, tau=0.03)
+    tree = Efdt(features, delta=0.01, nmin=260, tau=0.02)
     print('Total data size: ', rows)
     print('Test set (tail): ', len(test_set))
     n = 0
