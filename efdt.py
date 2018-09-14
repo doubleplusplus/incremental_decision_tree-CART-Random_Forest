@@ -452,7 +452,7 @@ def test_run():
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
     # tie breaking: when difference is so small, split when diff_g < epsilon < tau
-    tree = Efdt(features, delta=0.01, nmin=260, tau=0.02)
+    tree = Efdt(features, delta=0.01, nmin=100, tau=0.8)
     print('Total data size: ', rows)
     print('Training size: ', training_size)
     print('Test set size: ', n_test)
