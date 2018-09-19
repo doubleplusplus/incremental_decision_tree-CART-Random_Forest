@@ -355,8 +355,8 @@ def calc_metrics(y_test, y_pred, row_name):
 
 def test_run():
     start_time = time.time()
-    # bank.csv whole data size: 4521  # skiprows=1, nrows=n
-    df = pd.read_csv('./dataset/bank.csv', header=0, sep=';')
+
+    df = pd.read_csv('./dataset/waveform.data', header=None, sep=',')
     # df = pd.read_csv('./dataset/default_of_credit_card_clients.csv', skiprows=1, header=0)
     # df = df.drop(df.columns[0], axis=1)
     df = df.sample(frac=1).reset_index(drop=True)  # shuffle data rows
@@ -369,10 +369,10 @@ def test_run():
         import calendar
         d = dict((v.lower(),k) for k,v in enumerate(calendar.month_abbr))
         df1.month = df1.month.map(d)
-    month_str_to_int(df)
+    # month_str_to_int(df)
     # print(df.head(5)['month'])
     # convert df to data examples
-    n_training = 4000
+    n_training = 4500
     array = df.head(n_training).values
 
     set1 = array[:1000, :]
@@ -393,7 +393,7 @@ def test_run():
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
     # tie breaking: when difference is so small, split when diff_g < epsilon < tau
-    tree = Vfdt(features, delta=0.01, nmin=300, tau=0.03)
+    tree = Vfdt(features, delta=0.01, nmin=100, tau=0.5)
     print('Total data size: ', rows)
     print('Training size: ', n_training)
     print('Test set size: ', n_test)
@@ -403,7 +403,7 @@ def test_run():
         x_train = training_set[:, :-1]
         y_train = training_set[:, -1]
         for x, y in zip(x_train, y_train):
-            tree.update(x, y)
+            tree.update(x, y)  # fit data
         y_pred = tree.predict(x_test)
         print('Training set:', n, end=', ')
         print('ACCURACY: %.4f' % accuracy_score(y_test, y_pred))
