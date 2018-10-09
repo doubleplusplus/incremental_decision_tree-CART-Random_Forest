@@ -2,7 +2,6 @@
 # "Extremely Fast Decision Tree" (Manapragada, Webb & Salehi, 2018)
 #
 # this program contains 2 classes: Efdt, EfdtNode
-# test in command line window: python3 Efdt.py
 # changed to CART: Gini index
 #
 # Jamie
