@@ -77,7 +77,7 @@ class TreeNode:
         c = Counter(y)
         majority = c.most_common()[0]  # majority class and count
         label, count = majority[0], majority[1]
-        if len(c) == 1 or count/len(y) > 0.9:  # stop criterion
+        if len(y) < 2 or len(c) == 1 or count/len(y) > 0.9:  # stop criterion
             self.label = label  # set leaf
             return
         # split feature, value, gini
