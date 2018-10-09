@@ -34,46 +34,43 @@ class TreeNode:
     def gini(self, f, y, target):
         trans = f.reshape(len(f), -1)  # transpose 1d np array
         a = np.concatenate((trans, target), axis=1)  # vertical concatenation
-        a = a[a[:, 0].argsort()]
-
+        a = a[a[:, 0].argsort()]  # sort by column 0, feature values
         sort = a[:, 0]
-        split = (sort[0:-1] + sort[1:]) / 2
+        split = (sort[0:-1] + sort[1:]) / 2  # compute possible split values
 
-        left = np.array([split]).T
-        right = np.array([split]).T
+        left, right = np.array([split]), np.array([split])
         classes, counts = np.unique(y, return_counts=True)
         n_classes = len(classes)
+        # count occurrence of labels for each possible split value
         for i in range(n_classes):
             temp = a[:, -n_classes + i].cumsum()[:-1]
-            left = np.concatenate((left, temp.reshape(len(temp), -1)), axis=1)
-        for i in range(n_classes):
-            temp = counts[i] - left[:, -n_classes + i]
-            right = np.concatenate((right, temp.reshape(len(temp), -1)), axis=1)
-        sum_1 = left[:, 1:].sum(axis=1)
-        sum_2 = right[:, 1:].sum(axis=1)
+            left = np.vstack((left, temp))  # horizontal concatenation
+            right = np.vstack((right, counts[i] - temp))
+
+        sum_1 = left[1:, :].sum(axis=0)  # sum occurrence of labels
+        sum_2 = right[1:, :].sum(axis=0)
         n = len(split)
-        gini_t1, gini_t2 = [1.0] * n, [1.0] * n
+        gini_t1, gini_t2 = [1] * n, [1] * n
         # calculate left and right gini
         for i in range(n_classes):
-            gini_t1 -= (left[:, i + 1] / sum_1) ** 2
-            gini_t2 -= (right[:, i + 1] / sum_2) ** 2
+            gini_t1 -= (left[i + 1, :] / sum_1) ** 2
+            gini_t2 -= (right[i + 1, :] / sum_2) ** 2
         s = sum(counts)
         g = gini_t1 * sum_1 / s + gini_t2 * sum_2 / s
         g = list(g)
         min_g = min(g)
-
         split_value = split[g.index(min_g)]
         return split_value, min_g
 
     def split_feature_value(self, x, y, target):
         # compute gini index of every column
         n = x.shape[1]  # number of x columns
-        index = sample(range(n), self.n_features)  # feature sub-space
-        # list of (split_value, split_g) tuples
-        value_g = [self.gini(x[:, i], y, target) for i in index]
-        result = min(value_g, key=lambda t: t[1])  # find the minimum gini
-        feature = index[value_g.index(result)]
-        return feature, result[0], result[1]
+        sub_features = sample(range(n), self.n_features)  # feature sub-space
+        # list of (split_value, split_gini) tuples
+        value_g = [self.gini(x[:, i], y, target) for i in sub_features]
+        result = min(value_g, key=lambda t: t[1])  # (value, gini) tuple with min gini
+        feature = sub_features[value_g.index(result)]  # feature with min gini
+        return feature, result[0], result[1]  # split feature, value, gini
 
     # recursively grow the tree
     def attempt_split(self, x, y, target):
@@ -81,26 +78,22 @@ class TreeNode:
         majority = c.most_common()[0]  # majority class and count
         label, count = majority[0], majority[1]
         if len(c) == 1 or count/len(y) > 0.9:  # stop criterion
-            # print('len')
-            self.label = label
+            self.label = label  # set leaf
             return
         # split feature, value, gini
         feature, value, split_gini = self.split_feature_value(x, y, target)
-
         # stop split when gini decrease smaller than some threshold
         if self.split_gini - split_gini < 0.01:  # stop criterion
-            # print('gini')
-            self.label = label
+            self.label = label  # set leaf
             return
-
         index1 = x[:, feature] <= value
         index2 = x[:, feature] > value
         x1, y1, x2, y2 = x[index1], y[index1], x[index2], y[index2]
         target1, target2 = target[index1], target[index2]
-        if len(y2) == 0 or len(y1) == 0:
-            self.label = label
+        if len(y2) == 0 or len(y1) == 0:  # stop split
+            self.label = label  # set leaf
             return
-
+        # splitting procedure
         self.split_feature = feature
         self.split_value = value
         self.split_gini = split_gini
