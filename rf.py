@@ -31,6 +31,7 @@ class TreeNode:
     def is_leaf(self):
         return self.label is not None
 
+    """ use 2d array (matrix) to compute gini index """
     def gini(self, f, y, target):
         trans = f.reshape(len(f), -1)  # transpose 1d np array
         a = np.concatenate((trans, target), axis=1)  # vertical concatenation
@@ -136,7 +137,9 @@ class RandomForest:
         self.y = None
 
     def build_tree(self, tree):
-        x, y = resample(self.x, self.y)  # bootstrap sampling
+        n = len(self.y)  # n for bootstrap sampling size
+        # n = int(n * 0.5)
+        x, y = resample(self.x, self.y, n_samples=n)  # bootstrap sampling
         tree.train(x, y)
         return tree  # return tree for multiprocessing pool
 
