@@ -1,5 +1,7 @@
 """
-Random Forest with CART decision trees
+Random Forest implementation with CART decision trees
+This version is for continuous dataset (feature values)
+
 Author: Jamie Deng
 Date: 09/10/2018
 """
@@ -26,12 +28,11 @@ class TreeNode:
         self.split_value = None
         self.split_gini = 1
         self.label = None
-        # self.depth = 0
 
     def is_leaf(self):
         return self.label is not None
 
-    """ use 2d array (matrix) to compute gini index """
+    """ use 2d array (matrix) to compute gini index. Numerical feature values only """
     def gini(self, f, y, target):
         trans = f.reshape(len(f), -1)  # transpose 1d np array
         a = np.concatenate((trans, target), axis=1)  # vertical concatenation
@@ -167,6 +168,7 @@ class RandomForest:
 
 def test():
     start_time = time.time()
+    # It's a continous dataset, only numerical feature values
     df = pd.read_csv('./dataset/waveform.data', header=None, sep=',')
     data = df.values
     x = data[:, :-1]
