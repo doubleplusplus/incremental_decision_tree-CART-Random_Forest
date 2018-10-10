@@ -8,4 +8,4 @@ This implementation is CART tree, based on the Hoeffding Tree i.e. very fast dec
 
 Another newly published paper extends this model： "Extremely Fast Decision Tree" by Manapragada, Webb & Salehi (2018). As new data instances come in, EFDT can dynamically modify existing model, re-evaluate previous split or kill subtree. Now EFDT is available. But it runs slower than VFDT.
 
-Added implementation of Random Forest.
+Added implementation of Random Forest: rf.py
