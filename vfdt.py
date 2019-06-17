@@ -156,7 +156,7 @@ class VfdtNode:
             if second_min - min > epsilon:
                 # print('1 node split')
                 return [Xa, split_value]
-            elif second_min - min < epsilon < tau:
+            elif tau != 0 and second_min - min < epsilon < tau:
                 # print('2 node split')
                 return [Xa, split_value]
             else:
