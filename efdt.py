@@ -21,7 +21,7 @@ class EfdtNode:
     def __init__(self, possible_split_features):
         """
         nijk: statistics of feature i, value j, class
-        :list possible_split_features: features
+        possible_split_features: features list
         """
         self.parent = None
         self.left_child = None
