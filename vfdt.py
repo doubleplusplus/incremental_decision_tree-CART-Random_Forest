@@ -21,7 +21,7 @@ class VfdtNode:
     def __init__(self, possible_split_features):
         """
         nijk: statistics of feature i, value j, class
-        :list possible_split_features: features
+        possible_split_features: features list
         """
         self.parent = None
         self.left_child = None
@@ -87,7 +87,7 @@ class VfdtNode:
             prediction = max(class_frequency, key=class_frequency.get)
         return prediction
 
-    # update leaf stats in order to calculate infomation gain
+    # update leaf stats in order to calculate gini
     def update_stats(self, x, y):
         feats = self.possible_split_features
         nijk = self.nijk
