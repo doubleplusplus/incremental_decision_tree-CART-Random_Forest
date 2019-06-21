@@ -14,6 +14,7 @@ import pandas as pd
 import time
 from itertools import combinations
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.utils import check_array, check_X_y
 
 
 # VFDT node class
@@ -48,16 +49,19 @@ class VfdtNode:
             right_value = split_value[1]
             # discrete split value list's length = 1, stop splitting
             if len(left_value) <= 1:
-                new_features = [None if f == split_feature else f for f in left.possible_split_features]
+                new_features = [None if f == split_feature else f
+                                for f in left.possible_split_features]
                 left.possible_split_features = new_features
             if len(right_value) <= 1:
-                new_features = [None if f == split_feature else f for f in right.possible_split_features]
+                new_features = [None if f == split_feature else f
+                                for f in right.possible_split_features]
                 right.possible_split_features = new_features
 
     def is_leaf(self):
         return self.left_child is None and self.right_child is None
 
-    # recursively trace down the tree to distribute data examples to corresponding leaves
+    # recursively trace down the tree
+    # to distribute data examples to corresponding leaves
     def sort_example(self, x):
         if self.is_leaf():
             return self
@@ -80,7 +84,8 @@ class VfdtNode:
     # the most frequent class
     def most_frequent(self):
         try:
-            prediction = max(self.class_frequency, key=self.class_frequency.get)
+            prediction = max(self.class_frequency,
+                             key=self.class_frequency.get)
         except ValueError:
             # if self.class_frequency dict is empty, go back to parent
             class_frequency = self.parent.class_frequency
@@ -151,7 +156,7 @@ class VfdtNode:
             if second_min - min > epsilon:
                 # print('1 node split')
                 return [Xa, split_value]
-            elif second_min - min < epsilon < tau:
+            elif tau != 0 and second_min - min < epsilon < tau:
                 # print('2 node split')
                 return [Xa, split_value]
             else:
@@ -174,7 +179,8 @@ class VfdtNode:
         feature_values = list(njk.keys())  # list() is essential
         if not isinstance(feature_values[0], str):  # numeric  feature values
             sort = np.array(sorted(feature_values))
-            split = (sort[0:-1] + sort[1:])/2   # vectorized computation, like in R
+            # vectorized computation, like in R
+            split = (sort[0:-1] + sort[1:])/2
 
             D1_class_frequency = {j: 0 for j in class_frequency.keys()}
             for index in range(len(split)):
@@ -189,7 +195,8 @@ class VfdtNode:
                 D2_class_frequency = {}
                 for key, value in class_frequency.items():
                     if key in D1_class_frequency:
-                        D2_class_frequency[key] = value - D1_class_frequency[key]
+                        D2_class_frequency[key] = value - \
+                            D1_class_frequency[key]
                     else:
                         D2_class_frequency[key] = value
 
@@ -238,9 +245,11 @@ class VfdtNode:
                 comb = self.select_combinations(feature_values)
                 for i in comb:
                     left = list(i)
-                    D1_class_frequency = {key: 0 for key in class_frequency.keys()}
-                    D2_class_frequency = {key: 0 for key in class_frequency.keys()}
-                    for j,k in njk.items():
+                    D1_class_frequency = {
+                        key: 0 for key in class_frequency.keys()}
+                    D2_class_frequency = {
+                        key: 0 for key in class_frequency.keys()}
+                    for j, k in njk.items():
                         for key, value in class_frequency.items():
                             if j in left:
                                 if key in k:
@@ -301,12 +310,36 @@ class Vfdt:
         self.tau = tau
         self.root = VfdtNode(features)
         self.n_examples_processed = 0
+        # print(self.features, self.delta, self.tau, self.n_examples_processed)
+        # self.print_tree()
+        # print("--- / __init__ ---")
 
-    # update the tree by adding training example
-    def update(self, x, y):
+    # update the tree by adding one or many training example(s)
+    def update(self, X, y):
+        X, y = check_X_y(X, y)
+        for x, _y in zip(X, y):
+            self.__update(x, _y)
+        # print("Update!")
+        # print("X {}: {}".format(type(X), X))
+        # print("y {}: {}".format(type(y), y))
+        # self.print_tree()
+        # print("---")
+        # if isinstance(y, (np.ndarray, list)):
+        #     for x, _y in zip(X, y):
+        #         self.__update(x, _y)
+        # else:
+        #     self.__update(X, y)
+        # self.print_tree()
+        # print("---")
+        # print("End update! n_examples_processed={}".format(
+        #     self.n_examples_processed))
+        # print("--- --- ---")
+
+    # update the tree by adding one training example
+    def __update(self, x, _y):
         self.n_examples_processed += 1
         node = self.root.sort_example(x)
-        node.update_stats(x, y)
+        node.update_stats(x, _y)
 
         result = node.attempt_split(self.delta, self.nmin, self.tau)
         if result is not None:
@@ -323,19 +356,22 @@ class Vfdt:
         node.add_children(split_feature, split_value, left, right)
 
     # predict test example's classification
-    def predict(self, x_test):
-        prediction = []
-        if isinstance(x_test, np.ndarray) or isinstance(x_test, list):
-            for x in x_test:
-                leaf = self.root.sort_example(x)
-                prediction.append(leaf.most_frequent())
-            return prediction
-        else:
-            leaf = self.root.sort_example(x_test)
-            return leaf.most_frequent()
+    def predict(self, X):
+        X = check_array(X)
+        return [self.__predict(x) for x in X]
+        # if isinstance(X, (np.ndarray, list)):
+        #     return [self.__predict(x) for x in X]
+        # else:
+        #     leaf = self.__predict(X)
 
-    def print_tree(self, node):
-        if node.is_leaf():
+    def __predict(self, x):
+        leaf = self.root.sort_example(x)
+        return leaf.most_frequent()
+
+    def print_tree(self, node=None):
+        if node is None:
+            self.print_tree(self.root)
+        elif node.is_leaf():
             print('Leaf')
         else:
             print(node.split_feature)
@@ -345,10 +381,15 @@ class Vfdt:
 
 def calc_metrics(y_test, y_pred, row_name):
     accuracy = accuracy_score(y_test, y_pred)
-    metrics = list(precision_recall_fscore_support(y_test, y_pred, average='weighted',
-                                                   labels=np.unique(y_pred)))
-    metrics = pd.DataFrame({'accuracy': accuracy, 'precision': metrics[0],'recall': metrics[1],
-                            'f1': metrics[2]}, index=[row_name])
+    metrics = list(
+        precision_recall_fscore_support(
+            y_test, y_pred, average='weighted',
+            labels=np.unique(y_pred)))
+    metrics = pd.DataFrame({
+        'accuracy': accuracy,
+        'precision': metrics[0],
+        'recall': metrics[1],
+        'f1': metrics[2]}, index=[row_name])
     return metrics
 
 
@@ -363,10 +404,12 @@ def test_run():
     features = title[:-1]
     rows = df.shape[0]
 
+    print("Features:", features)
+
     # change month string to int
     def month_str_to_int(df1):
         import calendar
-        d = dict((v.lower(),k) for k,v in enumerate(calendar.month_abbr))
+        d = dict((v.lower(), k) for k, v in enumerate(calendar.month_abbr))
         df1.month = df1.month.map(d)
     # month_str_to_int(df)
     # print(df.head(5)['month'])
@@ -391,7 +434,8 @@ def test_run():
     # the true mean is at least r_bar - epsilon
     # Efdt parameter nmin: test split if new sample size > nmin
     # feature_values: unique values in every feature
-    # tie breaking: when difference is so small, split when diff_g < epsilon < tau
+    # tie breaking: when difference is so small,
+    # split when diff_g < epsilon < tau
     tree = Vfdt(features, delta=0.01, nmin=100, tau=0.5)
     print('Total data size: ', rows)
     print('Training size: ', n_training)
@@ -401,9 +445,9 @@ def test_run():
         n += len(training_set)
         x_train = training_set[:, :-1]
         y_train = training_set[:, -1]
-        for x, y in zip(x_train, y_train):
-            tree.update(x, y)  # fit data
+        tree.update(x_train, y_train)
         y_pred = tree.predict(x_test)
+
         print('Training set:', n, end=', ')
         print('ACCURACY: %.4f' % accuracy_score(y_test, y_pred))
 
