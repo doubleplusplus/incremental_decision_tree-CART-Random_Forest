@@ -104,7 +104,7 @@ class TreeNode:
         self.left_child.attempt_split(x1, y1, target1)
         self.right_child.attempt_split(x2, y2, target2)
 
-    # trance down the tree for each data instance, for prediction
+    # trace down the tree for each data instance, for prediction
     def sort(self, x):  # x is 1d array
         if self.label is not None:
             return self.label
@@ -157,10 +157,7 @@ class RandomForest:
         pool.join()
 
     def predict(self, x_test):  # ensemble
-        pred = []
-        for tree in self.classifiers:
-            y_pred = tree.classify(x_test)
-            pred.append(y_pred)
+        pred = [tree.classify(x_test) for tree in self.classifiers]
         pred = np.array(pred)
         result = [Counter(pred[:, i]).most_common()[0][0] for i in range(pred.shape[1])]
         return result
@@ -168,17 +165,17 @@ class RandomForest:
 
 def test():
     start_time = time.time()
-    # It's a continous dataset, only numerical feature values
+    # It's a continuous dataset, only numerical feature values
     df = pd.read_csv('./dataset/waveform.data', header=None, sep=',')
     data = df.values
     x = data[:, :-1]
     y = data[:, -1]
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25)
-    rf = RandomForest(n_classifiers=30)
+    rf = RandomForest(n_classifiers=50)  # optimal 100 trees
     rf.fit(x_train, y_train)
     y_pred = rf.predict(x_test)
     acc = accuracy_score(y_test, y_pred)
-    print('RF:', acc)
+    print('RF accuracy:', acc)
     print("--- Running time: %.6f seconds ---" % (time.time() - start_time))
 
 

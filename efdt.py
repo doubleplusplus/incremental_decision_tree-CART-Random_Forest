@@ -463,7 +463,7 @@ def test_run():
         for x, y in zip(x_train, y_train):
             tree.update(x, y)
         y_pred = tree.predict(x_test)
-        print('Training set:', n, end=', ')
+        print('Training samples:', n, end=', ')
         print('ACCURACY: %.4f' % accuracy_score(y_test, y_pred))
 
     print("--- Running time: %.6f seconds ---" % (time.time() - start_time))

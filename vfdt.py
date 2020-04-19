@@ -437,7 +437,7 @@ def test_run():
     # tie breaking: when difference is so small,
     # split when diff_g < epsilon < tau
     tree = Vfdt(features, delta=0.01, nmin=100, tau=0.5)
-    print('Total data size: ', rows)
+    print('Total dataset size: ', rows)
     print('Training size: ', n_training)
     print('Test set size: ', n_test)
     n = 0
@@ -448,7 +448,7 @@ def test_run():
         tree.update(x_train, y_train)
         y_pred = tree.predict(x_test)
 
-        print('Training set:', n, end=', ')
+        print('Training samples:', n, end=', ')
         print('ACCURACY: %.4f' % accuracy_score(y_test, y_pred))
 
     # tree.print_tree(tree.root)
