@@ -1,6 +1,6 @@
 # incremental-decision-tree-learner
 
-Definition from wikipedia: https://en.wikipedia.org/wiki/Incremental_decision_tree
+Definition from wikipedia: [incremental decision tree](https://en.wikipedia.org/wiki/Incremental_decision_tree)
 
 "An incremental decision tree algorithm is an online machine learning algorithm that outputs a decision tree. Many decision tree methods, construct a tree using a complete (static) dataset. Incremental decision tree methods allow an existing tree to be updated using only new data instances, without having to re-process past instances. This may be useful in situations where the entire dataset is not available when the tree is updated (i.e. the data was not stored), the original data set is too large to process or the characteristics of the data change over time (concept drift)."
 
