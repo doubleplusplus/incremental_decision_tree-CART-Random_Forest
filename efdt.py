@@ -6,7 +6,7 @@
 #
 # Jamie
 # 06/06/2018
-# ver 0.01
+#
 
 import time
 import numpy as np

@@ -6,7 +6,7 @@
 #
 # Jamie
 # 02/06/2018
-# ver 0.03
+#
 
 
 import numpy as np

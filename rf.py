@@ -2,7 +2,7 @@
 Random Forest implementation with CART decision trees
 This version is for continuous dataset (feature values)
 
-Author: Jamie Deng
+Author: Jamie
 Date: 09/10/2018
 """
 
